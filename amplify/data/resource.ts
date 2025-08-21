@@ -25,8 +25,8 @@ const schema = a.schema({
       state: a.enum(['UNPUBLISHED', 'PUBLISHED']),
       content: a.string(), // HTML content from Tiptap
       profileImage: a.string(), // S3 key for cover image
-      createdAt: a.datetime(),
-      updatedAt: a.datetime(),
+      createdAt: a.datetime().required(),
+      updatedAt: a.datetime().required(),
     })
     .secondaryIndexes((index) => [
       index('slug'), // GSI on slug field for fast lookups
@@ -49,5 +49,3 @@ export const data = defineData({
     },
   },
 });
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>

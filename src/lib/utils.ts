@@ -1,5 +1,5 @@
 import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '@/amplify/data/resource';
+import type { Schema } from '@/../amplify/data/resource';
 
 const client = generateClient<Schema>();
 
@@ -63,3 +63,5 @@ export function truncateText(text: string, maxLength: number): string {
 export function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '');
 }
+
+export type Nullable<T> = T | null;

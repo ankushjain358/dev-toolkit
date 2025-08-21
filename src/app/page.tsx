@@ -1,12 +1,6 @@
-'use client';
-
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { generateClient } from 'aws-amplify/data';
-import { Amplify } from 'aws-amplify';
-import type { Schema } from '@/amplify/data/resource';
-import { stripHtml, truncateText, formatDate } from '@/lib/utils';
-import outputs from '../../amplify_outputs.json';
+import { getPublishedBlogs } from '@/lib/server-client';
+import { stripHtml, truncateText, formatDate, Nullable } from '@/lib/utils';
 
 interface Blog {
   id: string;
@@ -19,80 +13,14 @@ interface Blog {
   state: 'PUBLISHED' | 'UNPUBLISHED';
 }
 
-export default function HomePage() {
-  const [blogs, setBlogs] = useState<Blog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [amplifyConfigured, setAmplifyConfigured] = useState(false);
+function getContentPreview(content: Nullable<string>): string {
+  if (!content) return 'Click to read more...';
+  const plainText = stripHtml(content);
+  return truncateText(plainText, 150);
+}
 
-  useEffect(() => {
-    // Configure Amplify first
-    try {
-      Amplify.configure(outputs);
-      setAmplifyConfigured(true);
-      console.log('Amplify configured on home page');
-    } catch (error) {
-      console.error('Error configuring Amplify:', error);
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Only fetch blogs after Amplify is configured
-    if (amplifyConfigured) {
-      fetchPublishedBlogs();
-    }
-  }, [amplifyConfigured]);
-
-  const fetchPublishedBlogs = async () => {
-    try {
-      console.log('Fetching published blogs...');
-      
-      const client = generateClient<Schema>();
-      
-      const { data, errors } = await client.models.Blogs.list({
-        filter: {
-          state: {
-            eq: 'PUBLISHED'
-          }
-        },
-        authMode: 'identityPool', // Use identity pool for guest access
-      });
-      
-      console.log('Published blogs response:', { data, errors });
-      
-      if (errors) {
-        console.error('GraphQL errors:', errors);
-      }
-      
-      // Sort by creation date, newest first
-      const sortedBlogs = (data || []).sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      
-      setBlogs(sortedBlogs);
-    } catch (error) {
-      console.error('Error fetching published blogs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getContentPreview = (content?: string): string => {
-    if (!content) return 'Click to read more...';
-    const plainText = stripHtml(content);
-    return truncateText(plainText, 150);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading blogs...</p>
-        </div>
-      </div>
-    );
-  }
+export default async function HomePage() {
+  const blogs = await getPublishedBlogs();
 
   return (
     <div className="min-h-screen bg-gray-50">
