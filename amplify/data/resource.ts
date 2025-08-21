@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { postConfirmation } from '../auth/post-confirmation/resource';
 
 const schema = a.schema({
   Users: a
@@ -36,7 +37,8 @@ const schema = a.schema({
       allow.authenticated(),
       allow.guest().to(['read']), // Guests can read all blogs, filtering done in app logic
     ]),
-});
+})
+.authorization((allow) => [allow.resource(postConfirmation)]);
 
 export type Schema = ClientSchema<typeof schema>;
 

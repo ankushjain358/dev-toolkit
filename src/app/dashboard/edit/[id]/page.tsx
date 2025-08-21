@@ -178,19 +178,18 @@ function BlogEditorContent({ params }: BlogEditorProps) {
     try {
       const fileExtension = file.name.split('.').pop();
       const fileName = `img_${nanoid()}.${fileExtension}`;
-      const key = `blogs/${blog.id}/${fileName}`; // Removed 'public/' prefix
+      const key = `blogs/${blog.id}/${fileName}`;
 
       toast.loading('Uploading image...', { id: 'image-upload' });
 
       const result = await uploadData({
-        key,
+        path: key,
         data: file,
-        options: {
-          contentType: file.type,
-        },
       }).result;
 
-      const url = await getUrl({ key: result.key });
+      const url = await getUrl({ 
+        path: result.path
+      });
       
       if (editor) {
         editor.chain().focus().setImage({ src: url.url.toString() }).run();
@@ -210,19 +209,19 @@ function BlogEditorContent({ params }: BlogEditorProps) {
     try {
       const fileExtension = file.name.split('.').pop();
       const fileName = `cover_${nanoid()}.${fileExtension}`;
-      const key = `blogs/${blog.id}/${fileName}`; // Removed 'public/' prefix
+      const key = `blogs/${blog.id}/${fileName}`;
 
       toast.loading('Uploading cover image...', { id: 'cover-upload' });
 
       const result = await uploadData({
-        key,
+        path: key,
         data: file,
-        options: {
-          contentType: file.type,
-        },
       }).result;
 
-      const url = await getUrl({ key: result.key });
+      const url = await getUrl({ 
+        path: result.path
+      
+      });
       setCoverImage(url.url.toString());
       setHasUnsavedChanges(true);
 

@@ -8,20 +8,11 @@ import { getCurrentUser } from 'aws-amplify/auth';
 import Link from 'next/link';
 import { Plus, Edit, Trash2, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { generateUniqueSlug, formatDate, stripHtml, truncateText } from '@/lib/utils';
+import { generateUniqueSlug, formatDate, stripHtml, truncateText, Nullable } from '@/lib/utils';
 
 const client = generateClient<Schema>();
 
-interface Blog {
-  id: string;
-  title: string;
-  slug: string;
-  state: 'PUBLISHED' | 'UNPUBLISHED';
-  content?: string;
-  profileImage?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+type Blog = Schema['Blogs']['type'];
 
 function DashboardContent() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -35,7 +26,8 @@ function DashboardContent() {
   const initializeUser = async () => {
     try {
       const user = await getCurrentUser();
-      const userId = await getOrCreateUser(user.signInDetails?.loginId || user.username);
+      const email = user.signInDetails?.loginId || user.username;
+      const userId = await getOrCreateUser(email);
       setCurrentUserId(userId);
       await fetchBlogs(userId);
     } catch (error) {
@@ -48,42 +40,16 @@ function DashboardContent() {
 
   const getOrCreateUser = async (email: string): Promise<string> => {
     try {
-      // Get the current user to access the actual Cognito sub
-      const currentUser = await getCurrentUser();
-      const cognitoSub = currentUser.userId; // This is the actual Cognito sub
+      // User is already created in post-confirmation, just get it
+      const userList = await client.models.Users.listUsersByEmail({ email });
       
-      console.log('Current user:', { email, cognitoSub });
-
-      // Check if user exists by email
-      const { data: existingUsers } = await client.models.Users.list({
-        filter: { email: { eq: email } }
-      });
-
-      if (existingUsers && existingUsers.length > 0) {
-        const existingUser = existingUsers[0];
-        
-        // Update cognito_subs if this sub isn't already included
-        if (!existingUser.cognito_subs?.includes(cognitoSub)) {
-          const updatedSubs = [...(existingUser.cognito_subs || []), cognitoSub];
-          await client.models.Users.update({
-            id: existingUser.id,
-            cognito_subs: updatedSubs,
-          });
-        }
-        
-        return existingUser.id;
+      if (userList?.data?.length > 0) {
+        return userList.data[0].id;
       }
-
-      // Create new user with proper Cognito sub
-      const { data: newUser } = await client.models.Users.create({
-        email,
-        cognito_subs: [cognitoSub],
-      });
-
-      console.log('Created new user:', newUser);
-      return newUser?.id || '';
+      
+      throw new Error('User not found after authentication');
     } catch (error) {
-      console.error('Error getting/creating user:', error);
+      console.error('Error getting user:', error);
       throw error;
     }
   };
@@ -93,8 +59,8 @@ function DashboardContent() {
       console.log('Fetching blogs for userId:', userId);
       
       const { data } = await client.models.Blogs.list({
-        filter: { userId: { eq: userId } }
-      });
+        filter: { userId: { eq: userId } },
+      })
       
       console.log('Fetched blogs:', data);
       
@@ -124,18 +90,22 @@ function DashboardContent() {
         slug 
       });
 
+      const now = new Date().toISOString();
+      
       const { data: newBlog } = await client.models.Blogs.create({
         userId: currentUserId,
         title: title.trim(),
         slug,
         state: 'UNPUBLISHED',
         content: '',
+        createdAt: now,
+        updatedAt: now,
       });
 
       console.log('Created blog:', newBlog);
 
       if (newBlog) {
-        setBlogs(prev => [newBlog, ...prev]);
+        setBlogs(prev => [newBlog as Blog, ...prev]);
         toast.success('Blog created successfully!', { id: 'create-blog' });
       }
     } catch (error) {
@@ -178,7 +148,7 @@ function DashboardContent() {
     }
   };
 
-  const getContentPreview = (content?: string): string => {
+  const getContentPreview = (content: Nullable<string> | undefined): string => {
     if (!content) return 'No content yet...';
     const plainText = stripHtml(content);
     return truncateText(plainText, 120);
