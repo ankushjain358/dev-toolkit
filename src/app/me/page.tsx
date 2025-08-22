@@ -1,270 +1,86 @@
 'use client';
 
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '@/../amplify/data/resource';
-import { useEffect, useState } from 'react';
-import { getCurrentUser } from 'aws-amplify/auth';
 import Link from 'next/link';
-import { Plus, Edit, Trash2, Eye, EyeOff, ExternalLink } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { generateUniqueSlug, formatDate, stripHtml, truncateText, Nullable } from '@/lib/utils';
+import { BookOpen, Bookmark, FileText, Layout, ArrowRight } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-const client = generateClient<Schema>();
-
-type Blog = Schema['Blogs']['type'];
-
-export default function BlogPage() {
-  const [blogs, setBlogs] = useState<Blog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    initializeUser();
-  }, []);
-
-  const initializeUser = async () => {
-    try {
-      const user = await getCurrentUser();
-      const email = user.signInDetails?.loginId || user.username;
-      const userId = await getOrCreateUser(email);
-      setCurrentUserId(userId);
-      await fetchBlogs(userId);
-    } catch (error) {
-      console.error('Error initializing user:', error);
-      toast.error('Failed to initialize user');
-    } finally {
-      setLoading(false);
+export default function DashboardPage() {
+  const devTools = [
+    {
+      title: "Blogs",
+      description: "Write and manage your blog posts.",
+      icon: BookOpen,
+      href: "/me/blogs",
+      count: 0
+    },
+    {
+      title: "Bookmarks",
+      description: "Save and organize your favorite links.",
+      icon: Bookmark,
+      href: "/me/bookmarks",
+      count: 0
+    },
+    {
+      title: "Notes",
+      description: "Create and manage your personal notes.",
+      icon: FileText,
+      href: "/me/notes",
+      count: 0
+    },
+    {
+      title: "Boards",
+      description: "Organize your work with Kanban boards.",
+      icon: Layout,
+      href: "/me/boards",
+      count: 0
     }
-  };
-
-  const getOrCreateUser = async (email: string): Promise<string> => {
-    try {
-      const userList = await client.models.Users.listUsersByEmail({ email });
-      
-      if (userList?.data?.length > 0) {
-        return userList.data[0].id;
-      }
-      
-      throw new Error('User not found after authentication');
-    } catch (error) {
-      console.error('Error getting user:', error);
-      throw error;
-    }
-  };
-
-  const fetchBlogs = async (userId: string) => {
-    try {
-      const { data } = await client.models.Blogs.list({
-        filter: { userId: { eq: userId } },
-      });
-      
-      const sortedBlogs = (data || []).sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setBlogs(sortedBlogs);
-    } catch (error) {
-      console.error('Error fetching blogs:', error);
-      toast.error('Failed to fetch blogs');
-    }
-  };
-
-  const createBlog = async () => {
-    const title = prompt('Enter blog title:');
-    if (!title?.trim() || !currentUserId) return;
-
-    try {
-      toast.loading('Creating blog...', { id: 'create-blog' });
-
-      const slug = await generateUniqueSlug(title.trim());
-      
-      const { data: newBlog } = await client.models.Blogs.create({
-        userId: currentUserId,
-        title: title.trim(),
-        slug,
-        state: 'UNPUBLISHED',
-        content: ''
-      });
-
-      if (newBlog) {
-        setBlogs(prev => [newBlog as Blog, ...prev]);
-        toast.success('Blog created successfully!', { id: 'create-blog' });
-      }
-    } catch (error) {
-      console.error('Error creating blog:', error);
-      toast.error('Failed to create blog', { id: 'create-blog' });
-    }
-  };
-
-  const toggleBlogState = async (blog: Blog) => {
-    try {
-      const newState = blog.state === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED';
-      
-      const { data: updatedBlog } = await client.models.Blogs.update({
-        id: blog.id,
-        state: newState,
-      });
-
-      if (updatedBlog) {
-        setBlogs(prev => prev.map(b => 
-          b.id === blog.id ? { ...b, state: newState } : b
-        ));
-        toast.success(`Blog ${newState.toLowerCase()} successfully!`);
-      }
-    } catch (error) {
-      console.error('Error updating blog state:', error);
-      toast.error('Failed to update blog state');
-    }
-  };
-
-  const deleteBlog = async (blog: Blog) => {
-    if (!confirm(`Are you sure you want to delete "${blog.title}"?`)) return;
-
-    try {
-      await client.models.Blogs.delete({ id: blog.id });
-      setBlogs(prev => prev.filter(b => b.id !== blog.id));
-      toast.success('Blog deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting blog:', error);
-      toast.error('Failed to delete blog');
-    }
-  };
-
-  const getContentPreview = (content: Nullable<string> | undefined): string => {
-    if (!content) return 'No content yet...';
-    const plainText = stripHtml(content);
-    return truncateText(plainText, 120);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Blog Management</h1>
-              <Link 
-                href="/" 
-                className="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                ← Back to Blog
-              </Link>
-            </div>
-            <button
-              onClick={createBlog}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <Plus size={20} />
-              New Blog
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="flex flex-1 flex-col gap-4 p-4">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold">Welcome Back</h1>
+        <p className="text-muted-foreground">
+          Here's an overview of your dev tools
+        </p>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {blogs.length === 0 ? (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-semibold text-gray-600 mb-4">No blogs yet</h2>
-            <p className="text-gray-500 mb-6">Create your first blog to get started!</p>
-            <button
-              onClick={createBlog}
-              className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
-            >
-              <Plus size={20} />
-              Create Your First Blog
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {blogs.map((blog) => (
-              <div key={blog.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                {blog.profileImage && (
-                  <div className="h-48 bg-gray-200">
-                    <img 
-                      src={blog.profileImage} 
-                      alt={blog.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-                      {blog.title}
-                    </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${
-                      blog.state === 'PUBLISHED' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {blog.state}
-                    </span>
-                  </div>
-                  
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                    {getContentPreview(blog.content)}
-                  </p>
-                  
-                  <div className="text-xs text-gray-500 mb-4">
-                    <p>Created: {formatDate(blog.createdAt)}</p>
-                    <p className="truncate">/{blog.slug}</p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/me/edit/${blog.id}`}
-                        className="p-2 text-gray-600 hover:text-blue-600 transition-colors rounded-md hover:bg-gray-100"
-                        title="Edit blog"
-                      >
-                        <Edit size={16} />
-                      </Link>
-                      
-                      <button
-                        onClick={() => toggleBlogState(blog)}
-                        className="p-2 text-gray-600 hover:text-green-600 transition-colors rounded-md hover:bg-gray-100"
-                        title={blog.state === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
-                      >
-                        {blog.state === 'PUBLISHED' ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                      
-                      {blog.state === 'PUBLISHED' && (
-                        <Link
-                          href={`/blog/${blog.slug}`}
-                          className="p-2 text-gray-600 hover:text-blue-600 transition-colors rounded-md hover:bg-gray-100"
-                          title="View published blog"
-                          target="_blank"
-                        >
-                          <ExternalLink size={16} />
-                        </Link>
-                      )}
-                    </div>
-                    
-                    <button
-                      onClick={() => deleteBlog(blog)}
-                      className="p-2 text-gray-600 hover:text-red-600 transition-colors rounded-md hover:bg-gray-100"
-                      title="Delete blog"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {devTools.map((tool) => {
+          const Icon = tool.icon;
+          return (
+            <Card key={tool.title} className="relative group">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icon className="h-5 w-5" />
+                  {tool.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  {tool.description}
+                </p>
+                <p className="mt-2 text-sm">
+                  <span className="font-medium">{tool.count}</span> items
+                </p>
+                <Link 
+                  href={tool.href}
+                  className="absolute inset-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <span className="sr-only">View {tool.title}</span>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
