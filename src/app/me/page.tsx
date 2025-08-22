@@ -1,6 +1,5 @@
 'use client';
 
-import { Authenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/../amplify/data/resource';
 import { useEffect, useState } from 'react';
@@ -14,7 +13,7 @@ const client = generateClient<Schema>();
 
 type Blog = Schema['Blogs']['type'];
 
-function DashboardContent() {
+export default function BlogPage() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -40,7 +39,6 @@ function DashboardContent() {
 
   const getOrCreateUser = async (email: string): Promise<string> => {
     try {
-      // User is already created in post-confirmation, just get it
       const userList = await client.models.Users.listUsersByEmail({ email });
       
       if (userList?.data?.length > 0) {
@@ -56,15 +54,10 @@ function DashboardContent() {
 
   const fetchBlogs = async (userId: string) => {
     try {
-      console.log('Fetching blogs for userId:', userId);
-      
       const { data } = await client.models.Blogs.list({
         filter: { userId: { eq: userId } },
-      })
+      });
       
-      console.log('Fetched blogs:', data);
-      
-      // Sort by creation date, newest first
       const sortedBlogs = (data || []).sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
@@ -84,25 +77,13 @@ function DashboardContent() {
 
       const slug = await generateUniqueSlug(title.trim());
       
-      console.log('Creating blog with:', { 
-        userId: currentUserId, 
-        title: title.trim(), 
-        slug 
-      });
-
-      const now = new Date().toISOString();
-      
       const { data: newBlog } = await client.models.Blogs.create({
         userId: currentUserId,
         title: title.trim(),
         slug,
         state: 'UNPUBLISHED',
-        content: '',
-        createdAt: now,
-        updatedAt: now,
+        content: ''
       });
-
-      console.log('Created blog:', newBlog);
 
       if (newBlog) {
         setBlogs(prev => [newBlog as Blog, ...prev]);
@@ -159,7 +140,7 @@ function DashboardContent() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -171,7 +152,7 @@ function DashboardContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Blog Management</h1>
               <Link 
                 href="/" 
                 className="text-blue-600 hover:text-blue-800 text-sm"
@@ -243,7 +224,7 @@ function DashboardContent() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Link
-                        href={`/dashboard/edit/${blog.id}`}
+                        href={`/me/edit/${blog.id}`}
                         className="p-2 text-gray-600 hover:text-blue-600 transition-colors rounded-md hover:bg-gray-100"
                         title="Edit blog"
                       >
@@ -285,13 +266,5 @@ function DashboardContent() {
         )}
       </main>
     </div>
-  );
-}
-
-export default function DashboardPage() {
-  return (
-    <Authenticator>
-      <DashboardContent />
-    </Authenticator>
   );
 }

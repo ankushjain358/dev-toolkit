@@ -1,3 +1,12 @@
+/* Start: Tailwind section */
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+/* End: Tailwind section */
+
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/../amplify/data/resource';
 

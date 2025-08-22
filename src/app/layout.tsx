@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from 'react-hot-toast';
 import '@aws-amplify/ui-react/styles.css';
-import AmplifyProvider from '@/components/AmplifyProvider';
+import ConfigureAmplifyClientSide from '@/components/ConfigureAmplifyClientSide';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,9 +30,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AmplifyProvider>
-          {children}
-        </AmplifyProvider>
+        <ConfigureAmplifyClientSide />
+        {children}
         <Toaster 
           position="top-right"
           toastOptions={{

@@ -26,7 +26,7 @@ export default async function BlogPage({ params }: BlogPageProps) {
               ← Back to Blog
             </Link>
             <Link 
-              href="/dashboard" 
+              href="/me" 
               className="text-gray-600 hover:text-gray-800 text-sm"
             >
               Dashboard

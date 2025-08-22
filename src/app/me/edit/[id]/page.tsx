@@ -4,9 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
-import { getCurrentUser } from 'aws-amplify/auth';
 import { uploadData, getUrl } from 'aws-amplify/storage';
-import { Authenticator } from '@aws-amplify/ui-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -35,19 +33,9 @@ interface BlogEditorProps {
   params: Promise<{ id: string }>;
 }
 
-interface Blog {
-  id: string;
-  title: string;
-  slug: string;
-  content: string;
-  state: 'PUBLISHED' | 'UNPUBLISHED';
-  profileImage?: string;
-  userId: string;
-}
-
-function BlogEditorContent({ params }: BlogEditorProps) {
+export default function BlogEditorPage({ params }: BlogEditorProps) {
   const router = useRouter();
-  const [blog, setBlog] = useState<Blog | null>(null);
+  const [blog, setBlog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState('');
@@ -68,13 +56,12 @@ function BlogEditorContent({ params }: BlogEditorProps) {
       }),
     ],
     content: '',
-    onUpdate: ({ editor }) => {
+    onUpdate: () => {
       setHasUnsavedChanges(true);
       debouncedSave();
     },
   });
 
-  // Debounced auto-save function (15 seconds)
   const debouncedSave = useCallback(
     debounce(() => {
       if (hasUnsavedChanges && blog) {
@@ -91,19 +78,13 @@ function BlogEditorContent({ params }: BlogEditorProps) {
   const initializeBlog = async () => {
     try {
       const { id } = await params;
-      const user = await getCurrentUser();
-      
-      console.log('Current user in editor:', user);
-      
       const { data } = await client.models.Blogs.get({ id });
       
       if (!data) {
         toast.error('Blog not found');
-        router.push('/dashboard');
+        router.push('/me');
         return;
       }
-
-      console.log('Loaded blog:', data);
 
       setBlog(data);
       setTitle(data.title);
@@ -115,7 +96,7 @@ function BlogEditorContent({ params }: BlogEditorProps) {
     } catch (error) {
       console.error('Error loading blog:', error);
       toast.error('Failed to load blog');
-      router.push('/dashboard');
+      router.push('/me');
     } finally {
       setLoading(false);
     }
@@ -220,7 +201,6 @@ function BlogEditorContent({ params }: BlogEditorProps) {
 
       const url = await getUrl({ 
         path: result.path
-      
       });
       setCoverImage(url.url.toString());
       setHasUnsavedChanges(true);
@@ -243,7 +223,7 @@ function BlogEditorContent({ params }: BlogEditorProps) {
         state: newState,
       });
 
-      setBlog(prev => prev ? { ...prev, state: newState } : null);
+      setBlog((prev: any) => prev ? { ...prev, state: newState } : null);
       toast.success(`Blog ${newState.toLowerCase()} successfully!`);
     } catch (error) {
       console.error('Failed to update blog state:', error);
@@ -267,8 +247,8 @@ function BlogEditorContent({ params }: BlogEditorProps) {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">Blog not found</p>
-          <Link href="/dashboard" className="text-blue-600 hover:text-blue-800">
-            Return to Dashboard
+          <Link href="/me" className="text-blue-600 hover:text-blue-800">
+            Return to Blog Management
           </Link>
         </div>
       </div>
@@ -282,7 +262,7 @@ function BlogEditorContent({ params }: BlogEditorProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link 
-                href="/dashboard"
+                href="/me"
                 className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft size={20} />
@@ -332,7 +312,6 @@ function BlogEditorContent({ params }: BlogEditorProps) {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Title and Cover Image Section */}
           <div className="p-6 border-b">
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -390,7 +369,6 @@ function BlogEditorContent({ params }: BlogEditorProps) {
             </div>
           </div>
 
-          {/* Editor Toolbar */}
           <div className="px-6 py-3 border-b bg-gray-50 flex items-center gap-2 flex-wrap">
             <button
               onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -465,7 +443,6 @@ function BlogEditorContent({ params }: BlogEditorProps) {
             </button>
           </div>
 
-          {/* Editor Content */}
           <div className="p-6">
             <EditorContent 
               editor={editor} 
@@ -478,7 +455,6 @@ function BlogEditorContent({ params }: BlogEditorProps) {
   );
 }
 
-// Debounce utility function
 function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -488,12 +464,4 @@ function debounce<T extends (...args: any[]) => any>(
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
-}
-
-export default function BlogEditorPage({ params }: BlogEditorProps) {
-  return (
-    <Authenticator>
-      <BlogEditorContent params={params} />
-    </Authenticator>
-  );
 }
