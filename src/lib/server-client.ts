@@ -23,7 +23,7 @@ export async function getPublishedBlogs() {
       authMode: 'identityPool', // Explicitly use identity pool for guest access
     });
     
-    console.log('Server client response:', { data, errors });
+    // console.log('Server client response:', { data, errors });
     
     if (errors) {
       console.error('GraphQL errors:', errors);

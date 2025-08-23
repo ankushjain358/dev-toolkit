@@ -258,7 +258,7 @@ export default function BlogsPage() {
                         size="icon"
                         asChild
                       >
-                        <Link href={`/me/edit/${blog.id}`}>
+                        <Link href={`/me/blogs/edit/${blog.id}`}>
                           <Edit className="h-4 w-4" />
                         </Link>
                       </Button>

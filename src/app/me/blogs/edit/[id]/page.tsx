@@ -1,0 +1,419 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '@/../amplify/data/resource';
+import { BlockNoteView } from "@blocknote/shadcn";
+import { uploadData, getUrl } from 'aws-amplify/storage';
+import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import { useCreateBlockNote } from '@blocknote/react';
+import '@blocknote/core/style.css';
+// Default styles for the mantine editor
+import "@blocknote/shadcn/style.css";
+// Include the included Inter font
+// import "@blocknote/core/fonts/inter.css";
+
+import {
+    Save,
+    Eye,
+    EyeOff
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import Link from 'next/link';
+import { nanoid } from 'nanoid';
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator
+} from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+
+const client = generateClient<Schema>();
+
+interface BlogEditorProps {
+    params: Promise<{ id: string }>;
+}
+
+export default function BlogEditorPage({ params }: BlogEditorProps) {
+    const router = useRouter();
+    const [blog, setBlog] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [title, setTitle] = useState('');
+    const [coverImage, setCoverImage] = useState<string>('');
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+    // Custom image upload handler for BlockNote
+    const uploadImageHandler = async (file: File, blockId?: string) => {
+         debugger
+        try {
+            if (!blog) return "";
+            debugger
+            const fileExtension = file.name.split('.').pop();
+            const fileName = `img_${nanoid()}.${fileExtension}`;
+            const key = `blogs/${blog.id}/${fileName}`;
+
+            const result = await uploadData({
+                path: key,
+                data: file,
+            }).result;
+
+            const url = await getUrl({ path: result.path });
+            return url.url.toString();
+        } catch (error) {
+            console.error('Image upload failed:', error);
+            toast.error('Failed to upload image');
+            return "";
+        }
+    };
+
+    const onEditorContentChange = async () => {
+        // The editor content is already JSON (blocks format)
+        setHasUnsavedChanges(true);
+        debouncedSave();
+    };
+
+    const editor = useCreateBlockNote({
+        initialContent: [
+            {
+                type: "paragraph",
+                content: [
+                    "Hello, ",
+                    {
+                        type: "text",
+                        text: "world!",
+                        styles: { bold: true },
+                    },
+                ],
+            },
+        ],
+        uploadFile: uploadImageHandler
+    });
+
+    const debouncedSave = useCallback(
+        debounce(() => {
+            if (hasUnsavedChanges && blog) {
+                handleAutoSave();
+            }
+        }, 15000),
+        [hasUnsavedChanges, blog]
+    );
+
+    useEffect(() => {
+        initializeBlog();
+    }, []);
+
+    const initializeBlog = async () => {
+        try {
+            const { id } = await params;
+            const { data } = await client.models.Blogs.get({ id });
+
+            if (!data) {
+                toast.error('Blog not found');
+                router.push('/me/blogs');
+                return;
+            }
+
+            setBlog(data);
+            setTitle(data.title);
+            setCoverImage(data.profileImage || '');
+
+            if (editor && data.content) {
+                try {
+                    const blocks = JSON.parse(data.content) as PartialBlock[];
+                    editor.replaceBlocks(editor.topLevelBlocks, blocks);
+                } catch (e) {
+                    // If the content is not in BlockNote JSON format, create a text block with the content
+                    editor.replaceBlocks(editor.topLevelBlocks, [{
+                        type: 'paragraph',
+                        content: data.content
+                    }]);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading blog:', error);
+            toast.error('Failed to load blog');
+            router.push('/me/blogs');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAutoSave = async () => {
+        if (!blog || !editor || saving) return;
+
+        setSaving(true);
+        try {
+            await client.models.Blogs.update({
+                id: blog.id,
+                title,
+                content: JSON.stringify(editor.document),
+                profileImage: coverImage || undefined,
+            })
+
+            setLastSaved(new Date());
+            setHasUnsavedChanges(false);
+            toast.success('Auto-saved', { duration: 2000 });
+        } catch (error) {
+            console.error('Auto-save failed:', error);
+            toast.error('Auto-save failed');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleManualSave = async () => {
+        if (!blog || !editor) return;
+
+        setSaving(true);
+        try {
+            const blocks = await editor.blocksToFullHTML(editor.document);
+
+            await client.models.Blogs.update({
+                id: blog.id,
+                title,
+                content: JSON.stringify(editor.document),
+                profileImage: coverImage || undefined,
+            });
+
+            setLastSaved(new Date());
+            setHasUnsavedChanges(false);
+            toast.success('Blog saved successfully!');
+        } catch (error) {
+            console.error('Save failed:', error);
+            toast.error('Failed to save blog');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+
+
+    const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !blog) return;
+
+        try {
+            const fileExtension = file.name.split('.').pop();
+            const fileName = `cover_${nanoid()}.${fileExtension}`;
+            const key = `blogs/${blog.id}/${fileName}`;
+
+            toast.loading('Uploading cover image...', { id: 'cover-upload' });
+
+            const result = await uploadData({
+                path: key,
+                data: file,
+            }).result;
+
+            const url = await getUrl({
+                path: result.path
+            });
+            setCoverImage(url.url.toString());
+            setHasUnsavedChanges(true);
+
+            toast.success('Cover image uploaded successfully!', { id: 'cover-upload' });
+        } catch (error) {
+            console.error('Cover image upload failed:', error);
+            toast.error('Failed to upload cover image', { id: 'cover-upload' });
+        }
+    };
+
+    const togglePublishState = async () => {
+        if (!blog) return;
+
+        try {
+            const newState = blog.state === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED';
+
+            await client.models.Blogs.update({
+                id: blog.id,
+                state: newState,
+            });
+
+            setBlog((prev: any) => prev ? { ...prev, state: newState } : null);
+            toast.success(`Blog ${newState.toLowerCase()} successfully!`);
+        } catch (error) {
+            console.error('Failed to update blog state:', error);
+            toast.error('Failed to update blog state');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex flex-1 items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading editor...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!blog) {
+        return (
+            <div className="flex flex-1 items-center justify-center">
+                <div className="text-center">
+                    <p className="text-muted-foreground">Blog not found</p>
+                    <Button variant="link" asChild>
+                        <Link href="/me/blogs">Return to Blog Management</Link>
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <>
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                <SidebarTrigger className="-ml-1" />
+                <Separator
+                    orientation="vertical"
+                    className="mr-2 data-[orientation=vertical]:h-4"
+                />
+                <div className="flex flex-1 items-center justify-between">
+                    <Breadcrumb>
+                        <BreadcrumbList>
+                            <BreadcrumbItem className="hidden md:block">
+                                <BreadcrumbLink href='/me'>
+                                    Dashboard
+                                </BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator className="hidden md:block" />
+                            <BreadcrumbItem>
+                                <BreadcrumbLink href='/me/blogs'>
+                                    Blogs
+                                </BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                <BreadcrumbPage>Edit Blog</BreadcrumbPage>
+                            </BreadcrumbItem>
+                        </BreadcrumbList>
+                    </Breadcrumb>
+                    <div className="flex items-center gap-2">
+                        {hasUnsavedChanges && (
+                            <span className="text-sm text-yellow-600 dark:text-yellow-500">Unsaved changes</span>
+                        )}
+                        {saving && (
+                            <span className="text-sm text-muted-foreground">Saving...</span>
+                        )}
+                        {lastSaved && (
+                            <span className="text-sm text-muted-foreground">
+                                Last saved: {lastSaved.toLocaleTimeString()}
+                            </span>
+                        )}
+                        <Button
+                            onClick={handleManualSave}
+                            disabled={saving}
+                            className="gap-2"
+                        >
+                            <Save className="h-4 w-4" />
+                            Save
+                        </Button>
+                        <Button
+                            onClick={togglePublishState}
+                            variant={blog.state === 'PUBLISHED' ? "destructive" : "default"}
+                            className="gap-2"
+                        >
+                            {blog.state === 'PUBLISHED' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            {blog.state === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
+                        </Button>
+                    </div>
+                </div>
+            </header>
+
+            <div className="flex flex-1 flex-col gap-4 p-4">
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="title">Blog Title</Label>
+                                <Input
+                                    id="title"
+                                    value={title}
+                                    onChange={(e) => {
+                                        setTitle(e.target.value);
+                                        setHasUnsavedChanges(true);
+                                    }}
+                                    placeholder="Enter blog title..."
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Cover Image</Label>
+                                <div className="flex items-center gap-4">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleCoverImageUpload}
+                                        className="hidden"
+                                        id="cover-upload"
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        asChild
+                                    >
+                                        <label htmlFor="cover-upload">
+                                            Upload Cover Image
+                                        </label>
+                                    </Button>
+                                    {coverImage && (
+                                        <div className="flex items-center gap-2">
+                                            <img
+                                                src={coverImage}
+                                                alt="Cover"
+                                                className="w-16 h-16 object-cover rounded-md"
+                                            />
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setCoverImage('');
+                                                    setHasUnsavedChanges(true);
+                                                }}
+                                            >
+                                                Remove
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="p-0">
+                        <BlockNoteView
+                            editor={editor}
+                            theme="light"
+                            className="min-h-[400px]"
+                            onChange={onEditorContentChange}
+                        />
+                    </CardContent>
+                </Card>
+            </div>
+        </>
+    );
+}
+
+function debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+): (...args: Parameters<T>) => void {
+    let timeout: NodeJS.Timeout;
+    return (...args: Parameters<T>) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+    };
+}

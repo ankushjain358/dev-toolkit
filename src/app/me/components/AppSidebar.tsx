@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { APP_CONSTANTS } from "@/lib/app-constants"
 
 const icons = {
   Home,
@@ -100,8 +101,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Bell className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-medium">Dev Toolkit</span>
-                  <span className="">v1.0.0</span>
+                  <span className="font-medium">{APP_CONSTANTS.APP_NAME}</span>
+                  <span className="">{APP_CONSTANTS.VERSION}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
