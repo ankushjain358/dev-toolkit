@@ -73,10 +73,10 @@ export default async function BlogPage({ params }: BlogPageProps) {
             </header>
 
             <div className="prose prose-lg prose-gray max-w-none">
-              {blog.content ? (
-                <div 
+              {blog.contentHtml ? (
+                <div className='b'
                   dangerouslySetInnerHTML={{ 
-                    __html: blog.content
+                    __html: blog.contentHtml
                   }} 
                 />
               ) : (

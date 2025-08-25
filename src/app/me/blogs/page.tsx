@@ -89,7 +89,8 @@ export default function BlogsPage() {
         title: title.trim(),
         slug,
         state: 'UNPUBLISHED',
-        content: '',
+        contentJson: null,
+        contentHtml: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
@@ -240,7 +241,7 @@ export default function BlogsPage() {
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-3">
-                      {getContentPreview(blog.content)}
+                      {getContentPreview(blog.contentHtml)}
                     </p>
                   </CardHeader>
                   

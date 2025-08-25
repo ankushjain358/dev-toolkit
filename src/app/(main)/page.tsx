@@ -82,7 +82,7 @@ export default async function HomePage() {
                         </Link>
                       </h3>
                       <p className="text-gray-600 mb-4 leading-relaxed">
-                        {getContentPreview(blogs[0].content)}
+                        {getContentPreview(blogs[0].contentHtml)}
                       </p>
                       <div className="flex items-center justify-between">
                         <p className="text-gray-500 text-sm">
@@ -127,7 +127,7 @@ export default async function HomePage() {
                           </Link>
                         </h3>
                         <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                          {getContentPreview(blog.content)}
+                          {getContentPreview(blog.contentHtml)}
                         </p>
                         <div className="flex items-center justify-between">
                           <p className="text-gray-500 text-sm">

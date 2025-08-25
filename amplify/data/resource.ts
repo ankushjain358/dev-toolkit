@@ -24,7 +24,8 @@ const schema = a.schema({
       title: a.string().required(),
       slug: a.string().required(),
       state: a.enum(['UNPUBLISHED', 'PUBLISHED']),
-      content: a.string(), // HTML content from Tiptap
+      contentJson: a.string(), // JSON content from Tiptap
+      contentHtml: a.string(),  // HTML content from Tiptap
       profileImage: a.string(), // S3 key for cover image
       createdAt: a.datetime().required(),
       updatedAt: a.datetime().required(),

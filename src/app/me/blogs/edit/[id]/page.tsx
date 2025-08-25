@@ -8,11 +8,6 @@ import { BlockNoteView } from "@blocknote/shadcn";
 import { uploadData, getUrl } from 'aws-amplify/storage';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { useCreateBlockNote } from '@blocknote/react';
-import '@blocknote/core/style.css';
-// Default styles for the mantine editor
-import "@blocknote/shadcn/style.css";
-// Include the included Inter font
-// import "@blocknote/core/fonts/inter.css";
 
 import {
     Save,
@@ -45,6 +40,7 @@ interface BlogEditorProps {
 }
 
 export default function BlogEditorPage({ params }: BlogEditorProps) {
+    debugger
     const router = useRouter();
     const [blog, setBlog] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -56,10 +52,9 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
     // Custom image upload handler for BlockNote
     const uploadImageHandler = async (file: File, blockId?: string) => {
-         debugger
+        debugger
         try {
             if (!blog) return "";
-            debugger
             const fileExtension = file.name.split('.').pop();
             const fileName = `img_${nanoid()}.${fileExtension}`;
             const key = `blogs/${blog.id}/${fileName}`;
@@ -98,7 +93,37 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                 ],
             },
         ],
-        uploadFile: uploadImageHandler
+        uploadFile: uploadImageHandler,
+        pasteHandler: ({ event, editor, defaultPasteHandler }) => {
+            const items = event.clipboardData?.items;
+            if (!items) return defaultPasteHandler();
+
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) {
+                        uploadImageHandler(file).then(url => {
+                            if (url) {
+                                editor.insertBlocks(
+                                    [{
+                                        type: "image",
+                                        props: {
+                                            url: url,
+                                            caption: ""
+                                        }
+                                    }],
+                                    editor.getTextCursorPosition().block,
+                                    "after"
+                                );
+                            }
+                        });
+                    }
+                    return true;
+                }
+            }
+
+            return defaultPasteHandler();
+        }
     });
 
     const debouncedSave = useCallback(
@@ -129,15 +154,15 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             setTitle(data.title);
             setCoverImage(data.profileImage || '');
 
-            if (editor && data.content) {
+            if (editor && data.contentJson) {
                 try {
-                    const blocks = JSON.parse(data.content) as PartialBlock[];
-                    editor.replaceBlocks(editor.topLevelBlocks, blocks);
+                    const blocks = JSON.parse(data.contentJson) as PartialBlock[];
+                    editor.replaceBlocks(editor.document, blocks);
                 } catch (e) {
                     // If the content is not in BlockNote JSON format, create a text block with the content
-                    editor.replaceBlocks(editor.topLevelBlocks, [{
+                    editor.replaceBlocks(editor.document, [{
                         type: 'paragraph',
-                        content: data.content
+                        content: data.contentJson
                     }]);
                 }
             }
@@ -150,15 +175,27 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         }
     };
 
+    const convertToHTML = async () => {
+        const contentHtml = await editor.blocksToFullHTML(editor.document);
+        const fixedHtml = contentHtml.replace(
+            /<p class="bn-inline-content"><\/p>/g,
+            '<p class="bn-inline-content"><br></p>'
+        );
+        return fixedHtml;
+    };
+
     const handleAutoSave = async () => {
         if (!blog || !editor || saving) return;
 
         setSaving(true);
         try {
+            const fixedHtml = await convertToHTML();
+            
             await client.models.Blogs.update({
                 id: blog.id,
                 title,
-                content: JSON.stringify(editor.document),
+                contentJson: JSON.stringify(editor.document),
+                contentHtml: fixedHtml,
                 profileImage: coverImage || undefined,
             })
 
@@ -178,12 +215,13 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
         setSaving(true);
         try {
-            const blocks = await editor.blocksToFullHTML(editor.document);
+            const fixedHtml = await convertToHTML();
 
             await client.models.Blogs.update({
                 id: blog.id,
                 title,
-                content: JSON.stringify(editor.document),
+                contentJson: JSON.stringify(editor.document),
+                contentHtml: fixedHtml,
                 profileImage: coverImage || undefined,
             });
 
