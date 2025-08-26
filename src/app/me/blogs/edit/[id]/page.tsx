@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/../amplify/data/resource';
@@ -31,7 +31,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+import { cn, convertToHTML } from "@/lib/utils";
+import outputs from '@/../amplify_outputs.json';
 
 const client = generateClient<Schema>();
 
@@ -40,9 +41,8 @@ interface BlogEditorProps {
 }
 
 export default function BlogEditorPage({ params }: BlogEditorProps) {
-    debugger
     const router = useRouter();
-    const [blog, setBlog] = useState<any>(null);
+    const blogRef = useRef<any>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [title, setTitle] = useState('');
@@ -50,14 +50,12 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-    // Custom image upload handler for BlockNote
     const uploadImageHandler = async (file: File, blockId?: string) => {
-        debugger
         try {
-            if (!blog) return "";
+            if (!blogRef.current) return "";
             const fileExtension = file.name.split('.').pop();
             const fileName = `img_${nanoid()}.${fileExtension}`;
-            const key = `blogs/${blog.id}/${fileName}`;
+            const key = `public/blogs/${blogRef.current.id}/${fileName}`;
 
             const result = await uploadData({
                 path: key,
@@ -65,7 +63,8 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             }).result;
 
             const url = await getUrl({ path: result.path });
-            return url.url.toString();
+            const distributionUrl = `https://${outputs.custom.distributionDomainName}/${key}`;
+            return distributionUrl;
         } catch (error) {
             console.error('Image upload failed:', error);
             toast.error('Failed to upload image');
@@ -73,67 +72,61 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         }
     };
 
-    const onEditorContentChange = async () => {
-        // The editor content is already JSON (blocks format)
+    const onEditorContentChange = () => {
         setHasUnsavedChanges(true);
         debouncedSave();
+    };
+
+    const handlePaste = ({ event, editor, defaultPasteHandler }: any) => {
+        const items = event.clipboardData?.items;
+        if (!items) return defaultPasteHandler();
+
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file && blogRef.current) {
+                    uploadImageHandler(file).then(url => {
+                        if (url) {
+                            editor.insertBlocks(
+                                [{
+                                    type: "image",
+                                    props: {
+                                        url: url,
+                                        caption: ""
+                                    }
+                                }],
+                                editor.getTextCursorPosition().block,
+                                "after"
+                            );
+                        }
+                    });
+                }
+                return true;
+            }
+        }
+
+        return defaultPasteHandler();
     };
 
     const editor = useCreateBlockNote({
         initialContent: [
             {
                 type: "paragraph",
-                content: [
-                    "Hello, ",
-                    {
-                        type: "text",
-                        text: "world!",
-                        styles: { bold: true },
-                    },
-                ],
+                content: "Start typing here...",
             },
         ],
-        uploadFile: uploadImageHandler,
-        pasteHandler: ({ event, editor, defaultPasteHandler }) => {
-            const items = event.clipboardData?.items;
-            if (!items) return defaultPasteHandler();
-
-            for (const item of items) {
-                if (item.type.startsWith('image/')) {
-                    const file = item.getAsFile();
-                    if (file) {
-                        uploadImageHandler(file).then(url => {
-                            if (url) {
-                                editor.insertBlocks(
-                                    [{
-                                        type: "image",
-                                        props: {
-                                            url: url,
-                                            caption: ""
-                                        }
-                                    }],
-                                    editor.getTextCursorPosition().block,
-                                    "after"
-                                );
-                            }
-                        });
-                    }
-                    return true;
-                }
-            }
-
-            return defaultPasteHandler();
-        }
+        uploadFile: async (file: File, blockId?: string | undefined) => {
+            if (!blogRef.current) return "";
+            return await uploadImageHandler(file, blockId);
+        },
+        pasteHandler: handlePaste,
     });
 
-    const debouncedSave = useCallback(
-        debounce(() => {
-            if (hasUnsavedChanges && blog) {
-                handleAutoSave();
-            }
-        }, 15000),
-        [hasUnsavedChanges, blog]
-    );
+    const debouncedSave = debounce(() => {
+        if (hasUnsavedChanges && blogRef.current) {
+            handleSave(true);
+        }
+    }, 15000);
 
     useEffect(() => {
         initializeBlog();
@@ -150,7 +143,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                 return;
             }
 
-            setBlog(data);
+            blogRef.current = data;
             setTitle(data.title);
             setCoverImage(data.profileImage || '');
 
@@ -175,50 +168,15 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         }
     };
 
-    const convertToHTML = async () => {
-        const contentHtml = await editor.blocksToFullHTML(editor.document);
-        const fixedHtml = contentHtml.replace(
-            /<p class="bn-inline-content"><\/p>/g,
-            '<p class="bn-inline-content"><br></p>'
-        );
-        return fixedHtml;
-    };
-
-    const handleAutoSave = async () => {
-        if (!blog || !editor || saving) return;
+    const handleSave = async (isAutoSave = false) => {
+        if (!blogRef.current || !editor || saving) return;
 
         setSaving(true);
         try {
-            const fixedHtml = await convertToHTML();
+            const fixedHtml = await convertToHTML(editor);
             
             await client.models.Blogs.update({
-                id: blog.id,
-                title,
-                contentJson: JSON.stringify(editor.document),
-                contentHtml: fixedHtml,
-                profileImage: coverImage || undefined,
-            })
-
-            setLastSaved(new Date());
-            setHasUnsavedChanges(false);
-            toast.success('Auto-saved', { duration: 2000 });
-        } catch (error) {
-            console.error('Auto-save failed:', error);
-            toast.error('Auto-save failed');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleManualSave = async () => {
-        if (!blog || !editor) return;
-
-        setSaving(true);
-        try {
-            const fixedHtml = await convertToHTML();
-
-            await client.models.Blogs.update({
-                id: blog.id,
+                id: blogRef.current.id,
                 title,
                 contentJson: JSON.stringify(editor.document),
                 contentHtml: fixedHtml,
@@ -227,10 +185,11 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
             setLastSaved(new Date());
             setHasUnsavedChanges(false);
-            toast.success('Blog saved successfully!');
+            toast.success(isAutoSave ? 'Auto-saved' : 'Blog saved successfully!', 
+                isAutoSave ? { duration: 2000 } : undefined);
         } catch (error) {
             console.error('Save failed:', error);
-            toast.error('Failed to save blog');
+            toast.error(isAutoSave ? 'Auto-save failed' : 'Failed to save blog');
         } finally {
             setSaving(false);
         }
@@ -240,12 +199,12 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
     const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file || !blog) return;
+        if (!file || !blogRef.current) return;
 
         try {
             const fileExtension = file.name.split('.').pop();
             const fileName = `cover_${nanoid()}.${fileExtension}`;
-            const key = `blogs/${blog.id}/${fileName}`;
+            const key = `public/blogs/${blogRef.current.id}/${fileName}`;
 
             toast.loading('Uploading cover image...', { id: 'cover-upload' });
 
@@ -268,17 +227,17 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     };
 
     const togglePublishState = async () => {
-        if (!blog) return;
+        if (!blogRef.current) return;
 
         try {
-            const newState = blog.state === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED';
+            const newState = blogRef.current.state === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED';
 
             await client.models.Blogs.update({
-                id: blog.id,
+                id: blogRef.current.id,
                 state: newState,
             });
 
-            setBlog((prev: any) => prev ? { ...prev, state: newState } : null);
+            blogRef.current = { ...blogRef.current, state: newState };
             toast.success(`Blog ${newState.toLowerCase()} successfully!`);
         } catch (error) {
             console.error('Failed to update blog state:', error);
@@ -297,7 +256,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         );
     }
 
-    if (!blog) {
+    if (!blogRef.current) {
         return (
             <div className="flex flex-1 items-center justify-center">
                 <div className="text-center">
@@ -351,7 +310,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                             </span>
                         )}
                         <Button
-                            onClick={handleManualSave}
+                            onClick={() => handleSave(false)}
                             disabled={saving}
                             className="gap-2"
                         >
@@ -360,11 +319,11 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                         </Button>
                         <Button
                             onClick={togglePublishState}
-                            variant={blog.state === 'PUBLISHED' ? "destructive" : "default"}
+                            variant={blogRef.current?.state === 'PUBLISHED' ? "destructive" : "default"}
                             className="gap-2"
                         >
-                            {blog.state === 'PUBLISHED' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            {blog.state === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
+                            {blogRef.current?.state === 'PUBLISHED' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            {blogRef.current?.state === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
                         </Button>
                     </div>
                 </div>

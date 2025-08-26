@@ -74,3 +74,12 @@ export function stripHtml(html: string): string {
 }
 
 export type Nullable<T> = T | null;
+
+export async function convertToHTML(editor: any) {
+  const contentHtml = await editor.blocksToFullHTML(editor.document);
+  const fixedHtml = contentHtml.replace(
+    /<p class="bn-inline-content"><\/p>/g,
+    '<p class="bn-inline-content"><br></p>'
+  );
+  return fixedHtml;
+}

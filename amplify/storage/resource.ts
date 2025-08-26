@@ -1,11 +1,11 @@
 import { defineStorage } from '@aws-amplify/backend';
 
 export const storage = defineStorage({
-  name: 'blogStorage',
+  name: 'AppStorage',
   access: (allow) => ({
-    'blogs/*': [
+    'public/blogs/*': [
       allow.authenticated.to(['read', 'write', 'delete']),
-      allow.guest.to(['read']),
+      // allow.guest.to(['read']),
     ],
   }),
 });
