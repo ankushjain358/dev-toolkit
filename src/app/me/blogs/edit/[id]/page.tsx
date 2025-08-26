@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/../amplify/data/resource';
 import { BlockNoteView } from "@blocknote/shadcn";
 import { uploadData, getUrl } from 'aws-amplify/storage';
-import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { useCreateBlockNote } from '@blocknote/react';
 
 import {
@@ -50,11 +50,14 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-    const uploadImageHandler = async (file: File, blockId?: string) => {
+     // Stores the document JSON.
+    const [blocks, setBlocks] = useState<Block[]>([]);
+
+    const uploadImageHandler = async (file: File, prefix = 'img') => {
         try {
             if (!blogRef.current) return "";
             const fileExtension = file.name.split('.').pop();
-            const fileName = `img_${nanoid()}.${fileExtension}`;
+            const fileName = `${prefix}_${nanoid()}.${fileExtension}`;
             const key = `public/blogs/${blogRef.current.id}/${fileName}`;
 
             const result = await uploadData({
@@ -62,7 +65,6 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                 data: file,
             }).result;
 
-            const url = await getUrl({ path: result.path });
             const distributionUrl = `https://${outputs.custom.distributionDomainName}/${key}`;
             return distributionUrl;
         } catch (error) {
@@ -75,6 +77,9 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     const onEditorContentChange = () => {
         setHasUnsavedChanges(true);
         debouncedSave();
+
+        // Sets the document JSON whenever the editor content changes.
+        setBlocks(editor.document);
     };
 
     const handlePaste = ({ event, editor, defaultPasteHandler }: any) => {
@@ -107,21 +112,21 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
         return defaultPasteHandler();
     };
-
+   
     const editor = useCreateBlockNote({
-        initialContent: [
+        initialContent: blocks && blocks.length > 0 ? blocks : [
             {
                 type: "paragraph",
                 content: "Start typing here...",
             },
         ],
-        uploadFile: async (file: File, blockId?: string | undefined) => {
+        uploadFile: async (file: File) => {
             if (!blogRef.current) return "";
-            return await uploadImageHandler(file, blockId);
+            return await uploadImageHandler(file);
         },
         pasteHandler: handlePaste,
     });
-
+    
     const debouncedSave = debounce(() => {
         if (hasUnsavedChanges && blogRef.current) {
             handleSave(true);
@@ -201,24 +206,12 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         const file = event.target.files?.[0];
         if (!file || !blogRef.current) return;
 
+        toast.loading('Uploading cover image...', { id: 'cover-upload' });
+        
         try {
-            const fileExtension = file.name.split('.').pop();
-            const fileName = `cover_${nanoid()}.${fileExtension}`;
-            const key = `public/blogs/${blogRef.current.id}/${fileName}`;
-
-            toast.loading('Uploading cover image...', { id: 'cover-upload' });
-
-            const result = await uploadData({
-                path: key,
-                data: file,
-            }).result;
-
-            const url = await getUrl({
-                path: result.path
-            });
-            setCoverImage(url.url.toString());
+            const url = await uploadImageHandler(file, 'cover');
+            setCoverImage(url);
             setHasUnsavedChanges(true);
-
             toast.success('Cover image uploaded successfully!', { id: 'cover-upload' });
         } catch (error) {
             console.error('Cover image upload failed:', error);

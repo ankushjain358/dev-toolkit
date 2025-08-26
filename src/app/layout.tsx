@@ -18,6 +18,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Dev Toolkit Blog",
   description: "A modern blog platform built with Next.js and AWS Amplify",
+  icons: {
+      icon: '/favicon.png', // Path to your favicon in the public directory
+      // You can also add other icons like apple-touch-icon, etc.
+      // apple: '/apple-touch-icon.png',
+    },
 };
 
 export default function RootLayout({
