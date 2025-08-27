@@ -156,9 +156,9 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             }
 
             blogRef.current = data;
-            setTitle(data.title);
+            setTitle(data.title || '');
             setCoverImage(data.profileImage || '');
-            debugger
+            
             if (editor && data.contentJson) {
                 try {
                     const blocks = JSON.parse(data.contentJson) as PartialBlock[];
@@ -180,6 +180,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         }
 
         editor.focus();
+        setHasUnsavedChanges(false);
     };
 
     const handleSave = async (isAutoSave = false) => {
@@ -344,7 +345,6 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                                     id="title"
                                     value={title}
                                     onChange={(e) => {
-                                        debugger
                                         setTitle(e.target.value);
                                         setHasUnsavedChanges(true);
                                     }}
