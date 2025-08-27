@@ -50,7 +50,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-     // Stores the document JSON.
+    // Stores the document JSON.
     const [blocks, setBlocks] = useState<Block[]>([]);
 
     const uploadImageHandler = async (file: File, prefix = 'img') => {
@@ -76,8 +76,6 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
     const onEditorContentChange = () => {
         setHasUnsavedChanges(true);
-        debouncedSave();
-
         // Sets the document JSON whenever the editor content changes.
         setBlocks(editor.document);
     };
@@ -112,7 +110,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
         return defaultPasteHandler();
     };
-   
+
     const editor = useCreateBlockNote({
         initialContent: blocks && blocks.length > 0 ? blocks : [
             {
@@ -126,16 +124,25 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         },
         pasteHandler: handlePaste,
     });
-    
-    const debouncedSave = debounce(() => {
-        if (hasUnsavedChanges && blogRef.current) {
-            handleSave(true);
-        }
-    }, 15000);
+
+    const debouncedSave = useMemo(
+        () => debounce(() => {
+            if (blogRef.current) {
+                handleSave(true);
+            }
+        }, 30000),
+        []
+    );
 
     useEffect(() => {
         initializeBlog();
     }, []);
+
+    useEffect(() => {
+        if (hasUnsavedChanges) {
+            debouncedSave();
+        }
+    }, [hasUnsavedChanges]);
 
     const initializeBlog = async () => {
         try {
@@ -151,7 +158,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             blogRef.current = data;
             setTitle(data.title);
             setCoverImage(data.profileImage || '');
-
+            debugger
             if (editor && data.contentJson) {
                 try {
                     const blocks = JSON.parse(data.contentJson) as PartialBlock[];
@@ -171,15 +178,17 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         } finally {
             setLoading(false);
         }
+
+        editor.focus();
     };
 
     const handleSave = async (isAutoSave = false) => {
         if (!blogRef.current || !editor || saving) return;
-
+       
         setSaving(true);
         try {
             const fixedHtml = await convertToHTML(editor);
-            
+
             await client.models.Blogs.update({
                 id: blogRef.current.id,
                 title,
@@ -190,8 +199,11 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
             setLastSaved(new Date());
             setHasUnsavedChanges(false);
-            toast.success(isAutoSave ? 'Auto-saved' : 'Blog saved successfully!', 
-                isAutoSave ? { duration: 2000 } : undefined);
+
+            // show notification only when blog is manually saved
+            if (!isAutoSave) {
+                toast.success('Blog saved successfully');
+            }
         } catch (error) {
             console.error('Save failed:', error);
             toast.error(isAutoSave ? 'Auto-save failed' : 'Failed to save blog');
@@ -207,7 +219,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         if (!file || !blogRef.current) return;
 
         toast.loading('Uploading cover image...', { id: 'cover-upload' });
-        
+
         try {
             const url = await uploadImageHandler(file, 'cover');
             setCoverImage(url);
@@ -332,6 +344,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                                     id="title"
                                     value={title}
                                     onChange={(e) => {
+                                        debugger
                                         setTitle(e.target.value);
                                         setHasUnsavedChanges(true);
                                     }}
