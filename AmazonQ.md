@@ -1,11 +1,13 @@
 # Amazon Q Context File - Dev Toolkit Project
 
 ## Project Overview
+
 Building a Next.js blog application with AWS Amplify Gen 2 according to requirements.md specifications.
 
 ## Current Status (as of 2025-08-20T18:25:45.811Z)
 
 ### ✅ Completed
+
 - Next.js 15 project setup with App Router
 - Tailwind CSS configuration
 - Basic Amplify Gen 2 backend structure
@@ -27,6 +29,7 @@ Building a Next.js blog application with AWS Amplify Gen 2 according to requirem
 - **✅ Utility functions for slug generation and content handling**
 
 ### ❌ Pending Implementation
+
 1. **Authentication Enhancements**
    - Environment variables setup for Google OAuth
    - User merging logic for multiple OAuth providers
@@ -47,6 +50,7 @@ Building a Next.js blog application with AWS Amplify Gen 2 according to requirem
    - Backup/export functionality
 
 ## Key Technical Decisions
+
 - Store blogs as HTML from Tiptap editor (rich content)
 - Auto-generate unique slugs with collision handling
 - Auto-merge users with same email across OAuth providers
@@ -55,6 +59,7 @@ Building a Next.js blog application with AWS Amplify Gen 2 according to requirem
 - Google OAuth only (no default Cognito)
 
 ## File Structure
+
 ```
 /mnt/c/Users/Admin/Desktop/Ankush/POCs/dev-platform/dev-toolkit/
 ├── amplify/
@@ -84,6 +89,7 @@ Building a Next.js blog application with AWS Amplify Gen 2 according to requirem
 ## Features Implemented
 
 ### Blog Editor
+
 - ✅ Full Tiptap rich text editor with toolbar
 - ✅ Bold, italic, lists, quotes, headings
 - ✅ Image upload directly into content
@@ -94,6 +100,7 @@ Building a Next.js blog application with AWS Amplify Gen 2 according to requirem
 - ✅ Visual feedback for unsaved changes
 
 ### Content Management
+
 - ✅ Auto-generated unique slugs
 - ✅ Duplicate slug prevention
 - ✅ Content preview in listings
@@ -101,6 +108,7 @@ Building a Next.js blog application with AWS Amplify Gen 2 according to requirem
 - ✅ Image storage in S3 with proper paths
 
 ### UI/UX
+
 - ✅ Responsive design
 - ✅ Toast notifications for all actions
 - ✅ Loading states
@@ -109,6 +117,7 @@ Building a Next.js blog application with AWS Amplify Gen 2 according to requirem
 - ✅ Featured post on homepage
 
 ## Next Steps Priority
+
 1. Set up environment variables for Google OAuth
 2. Deploy to AWS and test authentication
 3. Implement user merging logic
@@ -117,12 +126,14 @@ Building a Next.js blog application with AWS Amplify Gen 2 according to requirem
 6. Analytics and monitoring
 
 ## Environment Variables Needed
+
 ```
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
 
 ## Notes
+
 - Project uses Next.js 15 with Turbopack
 - AWS Amplify Gen 2 for backend services
 - Tailwind CSS v4 for styling

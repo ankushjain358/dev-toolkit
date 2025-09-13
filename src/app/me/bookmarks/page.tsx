@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export default function BookmarksPage() {
   return (
@@ -6,5 +6,5 @@ export default function BookmarksPage() {
       <h1 className="text-2xl font-bold">Bookmarks</h1>
       <p className="text-muted-foreground">Your bookmarks will appear here.</p>
     </div>
-  )
+  );
 }

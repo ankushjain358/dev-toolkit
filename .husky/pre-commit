@@ -1,0 +1,3 @@
+echo "Running pre-commit checks"
+npx lint-staged
+echo "Completed pre-commit checks"

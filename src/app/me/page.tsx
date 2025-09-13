@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { BookOpen, Bookmark, FileText, Layout, ArrowRight } from 'lucide-react';
+import Link from "next/link";
+import { BookOpen, Bookmark, FileText, Layout, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -12,29 +12,29 @@ export default function DashboardPage() {
       description: "Write and manage your blog posts.",
       icon: BookOpen,
       href: "/me/blogs",
-      count: 0
+      count: 0,
     },
     {
       title: "Bookmarks",
       description: "Save and organize your favorite links.",
       icon: Bookmark,
       href: "/me/bookmarks",
-      count: 0
+      count: 0,
     },
     {
       title: "Notes",
       description: "Create and manage your personal notes.",
       icon: FileText,
       href: "/me/notes",
-      count: 0
+      count: 0,
     },
     {
       title: "Boards",
       description: "Organize your work with Kanban boards.",
       icon: Layout,
       href: "/me/boards",
-      count: 0
-    }
+      count: 0,
+    },
   ];
 
   return (
@@ -64,14 +64,14 @@ export default function DashboardPage() {
                 <p className="mt-2 text-sm">
                   <span className="font-medium">{tool.count}</span> items
                 </p>
-                <Link 
+                <Link
                   href={tool.href}
                   className="absolute inset-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
                   <span className="sr-only">View {tool.title}</span>
                 </Link>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <ArrowRight className="h-4 w-4" />

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export default function NotesPage() {
   return (
@@ -6,5 +6,5 @@ export default function NotesPage() {
       <h1 className="text-2xl font-bold">Notes</h1>
       <p className="text-muted-foreground">Your notes will appear here.</p>
     </div>
-  )
+  );
 }

@@ -1,31 +1,31 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '@/../amplify/data/resource';
-import { uploadData, getUrl } from 'aws-amplify/storage';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
-import Placeholder from '@tiptap/extension-placeholder';
-import { 
-  Bold, 
-  Italic, 
-  List, 
-  ListOrdered, 
-  Quote, 
-  Undo, 
-  Redo, 
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/../amplify/data/resource";
+import { uploadData, getUrl } from "aws-amplify/storage";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+import Placeholder from "@tiptap/extension-placeholder";
+import {
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Quote,
+  Undo,
+  Redo,
   ImageIcon,
   Save,
   Eye,
   EyeOff,
-  ArrowLeft
-} from 'lucide-react';
-import toast from 'react-hot-toast';
-import Link from 'next/link';
-import { nanoid } from 'nanoid';
+  ArrowLeft,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import Link from "next/link";
+import { nanoid } from "nanoid";
 
 const client = generateClient<Schema>();
 
@@ -38,8 +38,8 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const [blog, setBlog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [title, setTitle] = useState('');
-  const [coverImage, setCoverImage] = useState<string>('');
+  const [title, setTitle] = useState("");
+  const [coverImage, setCoverImage] = useState<string>("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -48,14 +48,14 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       StarterKit,
       Image.configure({
         HTMLAttributes: {
-          class: 'max-w-full h-auto rounded-lg',
+          class: "max-w-full h-auto rounded-lg",
         },
       }),
       Placeholder.configure({
-        placeholder: 'Start writing your blog post...',
+        placeholder: "Start writing your blog post...",
       }),
     ],
-    content: '',
+    content: "",
     onUpdate: () => {
       setHasUnsavedChanges(true);
       debouncedSave();
@@ -68,7 +68,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         handleAutoSave();
       }
     }, 15000),
-    [hasUnsavedChanges, blog]
+    [hasUnsavedChanges, blog],
   );
 
   useEffect(() => {
@@ -79,24 +79,24 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     try {
       const { id } = await params;
       const { data } = await client.models.Blogs.get({ id });
-      
+
       if (!data) {
-        toast.error('Blog not found');
-        router.push('/me');
+        toast.error("Blog not found");
+        router.push("/me");
         return;
       }
 
       setBlog(data);
       setTitle(data.title);
-      setCoverImage(data.profileImage || '');
-      
+      setCoverImage(data.profileImage || "");
+
       if (editor) {
-        editor.commands.setContent(data.content || '');
+        editor.commands.setContent(data.content || "");
       }
     } catch (error) {
-      console.error('Error loading blog:', error);
-      toast.error('Failed to load blog');
-      router.push('/me');
+      console.error("Error loading blog:", error);
+      toast.error("Failed to load blog");
+      router.push("/me");
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     setSaving(true);
     try {
       const content = editor.getHTML();
-      
+
       await client.models.Blogs.update({
         id: blog.id,
         title,
@@ -118,10 +118,10 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
-      toast.success('Auto-saved', { duration: 2000 });
+      toast.success("Auto-saved", { duration: 2000 });
     } catch (error) {
-      console.error('Auto-save failed:', error);
-      toast.error('Auto-save failed');
+      console.error("Auto-save failed:", error);
+      toast.error("Auto-save failed");
     } finally {
       setSaving(false);
     }
@@ -133,7 +133,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     setSaving(true);
     try {
       const content = editor.getHTML();
-      
+
       await client.models.Blogs.update({
         id: blog.id,
         title,
@@ -143,72 +143,78 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
-      toast.success('Blog saved successfully!');
+      toast.success("Blog saved successfully!");
     } catch (error) {
-      console.error('Save failed:', error);
-      toast.error('Failed to save blog');
+      console.error("Save failed:", error);
+      toast.error("Failed to save blog");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file || !blog) return;
 
     try {
-      const fileExtension = file.name.split('.').pop();
+      const fileExtension = file.name.split(".").pop();
       const fileName = `img_${nanoid()}.${fileExtension}`;
       const key = `blogs/${blog.id}/${fileName}`;
 
-      toast.loading('Uploading image...', { id: 'image-upload' });
+      toast.loading("Uploading image...", { id: "image-upload" });
 
       const result = await uploadData({
         path: key,
         data: file,
       }).result;
 
-      const url = await getUrl({ 
-        path: result.path
+      const url = await getUrl({
+        path: result.path,
       });
-      
+
       if (editor) {
         editor.chain().focus().setImage({ src: url.url.toString() }).run();
       }
 
-      toast.success('Image uploaded successfully!', { id: 'image-upload' });
+      toast.success("Image uploaded successfully!", { id: "image-upload" });
     } catch (error) {
-      console.error('Image upload failed:', error);
-      toast.error('Failed to upload image', { id: 'image-upload' });
+      console.error("Image upload failed:", error);
+      toast.error("Failed to upload image", { id: "image-upload" });
     }
   };
 
-  const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file || !blog) return;
 
     try {
-      const fileExtension = file.name.split('.').pop();
+      const fileExtension = file.name.split(".").pop();
       const fileName = `cover_${nanoid()}.${fileExtension}`;
       const key = `blogs/${blog.id}/${fileName}`;
 
-      toast.loading('Uploading cover image...', { id: 'cover-upload' });
+      toast.loading("Uploading cover image...", { id: "cover-upload" });
 
       const result = await uploadData({
         path: key,
         data: file,
       }).result;
 
-      const url = await getUrl({ 
-        path: result.path
+      const url = await getUrl({
+        path: result.path,
       });
       setCoverImage(url.url.toString());
       setHasUnsavedChanges(true);
 
-      toast.success('Cover image uploaded successfully!', { id: 'cover-upload' });
+      toast.success("Cover image uploaded successfully!", {
+        id: "cover-upload",
+      });
     } catch (error) {
-      console.error('Cover image upload failed:', error);
-      toast.error('Failed to upload cover image', { id: 'cover-upload' });
+      console.error("Cover image upload failed:", error);
+      toast.error("Failed to upload cover image", { id: "cover-upload" });
     }
   };
 
@@ -216,18 +222,18 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     if (!blog) return;
 
     try {
-      const newState = blog.state === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED';
-      
+      const newState = blog.state === "PUBLISHED" ? "UNPUBLISHED" : "PUBLISHED";
+
       await client.models.Blogs.update({
         id: blog.id,
         state: newState,
       });
 
-      setBlog((prev: any) => prev ? { ...prev, state: newState } : null);
+      setBlog((prev: any) => (prev ? { ...prev, state: newState } : null));
       toast.success(`Blog ${newState.toLowerCase()} successfully!`);
     } catch (error) {
-      console.error('Failed to update blog state:', error);
-      toast.error('Failed to update blog state');
+      console.error("Failed to update blog state:", error);
+      toast.error("Failed to update blog state");
     }
   };
 
@@ -261,14 +267,16 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link 
+              <Link
                 href="/me"
                 className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft size={20} />
               </Link>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Edit Blog</h1>
+                <h1 className="text-xl font-semibold text-gray-900">
+                  Edit Blog
+                </h1>
                 {lastSaved && (
                   <p className="text-sm text-gray-500">
                     Last saved: {lastSaved.toLocaleTimeString()}
@@ -276,7 +284,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                 )}
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               {hasUnsavedChanges && (
                 <span className="text-sm text-orange-600">Unsaved changes</span>
@@ -284,7 +292,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
               {saving && (
                 <span className="text-sm text-blue-600">Saving...</span>
               )}
-              
+
               <button
                 onClick={handleManualSave}
                 disabled={saving}
@@ -293,17 +301,21 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                 <Save size={16} />
                 Save
               </button>
-              
+
               <button
                 onClick={togglePublishState}
                 className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-                  blog.state === 'PUBLISHED'
-                    ? 'bg-yellow-600 text-white hover:bg-yellow-700'
-                    : 'bg-green-600 text-white hover:bg-green-700'
+                  blog.state === "PUBLISHED"
+                    ? "bg-yellow-600 text-white hover:bg-yellow-700"
+                    : "bg-green-600 text-white hover:bg-green-700"
                 }`}
               >
-                {blog.state === 'PUBLISHED' ? <EyeOff size={16} /> : <Eye size={16} />}
-                {blog.state === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
+                {blog.state === "PUBLISHED" ? (
+                  <EyeOff size={16} />
+                ) : (
+                  <Eye size={16} />
+                )}
+                {blog.state === "PUBLISHED" ? "Unpublish" : "Publish"}
               </button>
             </div>
           </div>
@@ -349,14 +361,14 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                 </label>
                 {coverImage && (
                   <div className="flex items-center gap-2">
-                    <img 
-                      src={coverImage} 
-                      alt="Cover" 
+                    <img
+                      src={coverImage}
+                      alt="Cover"
                       className="w-16 h-16 object-cover rounded-md"
                     />
                     <button
                       onClick={() => {
-                        setCoverImage('');
+                        setCoverImage("");
                         setHasUnsavedChanges(true);
                       }}
                       className="text-red-600 hover:text-red-800 text-sm"
@@ -373,7 +385,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             <button
               onClick={() => editor?.chain().focus().toggleBold().run()}
               className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-                editor?.isActive('bold') ? 'bg-gray-200' : ''
+                editor?.isActive("bold") ? "bg-gray-200" : ""
               }`}
             >
               <Bold size={16} />
@@ -381,7 +393,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             <button
               onClick={() => editor?.chain().focus().toggleItalic().run()}
               className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-                editor?.isActive('italic') ? 'bg-gray-200' : ''
+                editor?.isActive("italic") ? "bg-gray-200" : ""
               }`}
             >
               <Italic size={16} />
@@ -389,7 +401,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             <button
               onClick={() => editor?.chain().focus().toggleBulletList().run()}
               className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-                editor?.isActive('bulletList') ? 'bg-gray-200' : ''
+                editor?.isActive("bulletList") ? "bg-gray-200" : ""
               }`}
             >
               <List size={16} />
@@ -397,7 +409,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             <button
               onClick={() => editor?.chain().focus().toggleOrderedList().run()}
               className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-                editor?.isActive('orderedList') ? 'bg-gray-200' : ''
+                editor?.isActive("orderedList") ? "bg-gray-200" : ""
               }`}
             >
               <ListOrdered size={16} />
@@ -405,14 +417,14 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             <button
               onClick={() => editor?.chain().focus().toggleBlockquote().run()}
               className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-                editor?.isActive('blockquote') ? 'bg-gray-200' : ''
+                editor?.isActive("blockquote") ? "bg-gray-200" : ""
               }`}
             >
               <Quote size={16} />
             </button>
-            
+
             <div className="w-px h-6 bg-gray-300 mx-2"></div>
-            
+
             <input
               type="file"
               accept="image/*"
@@ -426,9 +438,9 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             >
               <ImageIcon size={16} />
             </label>
-            
+
             <div className="w-px h-6 bg-gray-300 mx-2"></div>
-            
+
             <button
               onClick={() => editor?.chain().focus().undo().run()}
               className="p-2 rounded hover:bg-gray-200 transition-colors"
@@ -444,8 +456,8 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
           </div>
 
           <div className="p-6">
-            <EditorContent 
-              editor={editor} 
+            <EditorContent
+              editor={editor}
               className="prose prose-lg max-w-none min-h-[400px] focus:outline-none"
             />
           </div>
@@ -457,7 +469,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
 function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout;
   return (...args: Parameters<T>) => {

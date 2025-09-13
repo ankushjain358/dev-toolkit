@@ -1,8 +1,18 @@
-"use client"
-import * as React from "react"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
-import { Home, User, Settings, Bell, BookOpen, Bookmark, FileText, Layout, LogOut } from "lucide-react"
+"use client";
+import * as React from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import {
+  Home,
+  User,
+  Settings,
+  Bell,
+  BookOpen,
+  Bookmark,
+  FileText,
+  Layout,
+  LogOut,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,8 +24,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import { APP_CONSTANTS } from "@/lib/app-constants"
+} from "@/components/ui/sidebar";
+import { APP_CONSTANTS } from "@/lib/app-constants";
 
 const icons = {
   Home,
@@ -25,8 +35,8 @@ const icons = {
   Bookmark,
   FileText,
   Layout,
-  LogOut
-}
+  LogOut,
+};
 
 // Navigation data with actual links
 const data = {
@@ -38,9 +48,9 @@ const data = {
         {
           title: "Dashboard",
           url: "/me",
-          icon: "Home"
-        }
-      ]
+          icon: "Home",
+        },
+      ],
     },
     {
       title: "Dev Tools",
@@ -49,24 +59,24 @@ const data = {
         {
           title: "Blogs",
           url: "/me/blogs",
-          icon: "BookOpen"
+          icon: "BookOpen",
         },
         {
           title: "Bookmarks",
           url: "/me/bookmarks",
-          icon: "Bookmark"
+          icon: "Bookmark",
         },
         {
           title: "Notes",
           url: "/me/notes",
-          icon: "FileText"
+          icon: "FileText",
         },
         {
           title: "Boards",
           url: "/me/boards",
-          icon: "Layout"
-        }
-      ]
+          icon: "Layout",
+        },
+      ],
     },
     {
       title: "Account",
@@ -75,25 +85,25 @@ const data = {
         {
           title: "Profile",
           url: "/me/profile",
-          icon: "User"
+          icon: "User",
         },
         {
           title: "Settings",
           url: "/me/settings",
-          icon: "Settings"
-        }
-      ]
-    }
-  ]
-}
+          icon: "Settings",
+        },
+      ],
+    },
+  ],
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <Sidebar {...props}>
       <SidebarHeader className="border-b p-4">
-         <SidebarMenu>
+        <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/me">
@@ -117,8 +127,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {group.items.map((item) => {
-                    const Icon = icons[item.icon as keyof typeof icons]
-                    const isActive = pathname === item.url
+                    const Icon = icons[item.icon as keyof typeof icons];
+                    const isActive = pathname === item.url;
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton asChild isActive={isActive}>
@@ -128,7 +138,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                    )
+                    );
                   })}
                 </SidebarMenu>
               </SidebarGroupContent>
@@ -140,11 +150,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <button 
+                <button
                   onClick={() => {
                     // Add your logout logic here
-                    console.log("Logout clicked")
-                  }} 
+                    console.log("Logout clicked");
+                  }}
                   className="flex items-center w-full text-muted-foreground hover:text-foreground"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -157,5 +167,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
