@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/../amplify/data/resource";
-import { BlockNoteView } from "@blocknote/shadcn";
 import { uploadData, getUrl } from "aws-amplify/storage";
-import { Block, BlockNoteEditor, PartialBlock } from "@blocknote/core";
-import { useCreateBlockNote } from "@blocknote/react";
-
 import { Save, Eye, EyeOff } from "lucide-react";
+import TiptapEditor from "@/app/me/components/TiptapEditor";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { nanoid } from "nanoid";
@@ -27,10 +27,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { cn, convertToHTML } from "@/lib/utils";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 import outputs from "@/../amplify_outputs.json";
 
 const client = generateClient<Schema>();
+
+const blogSchema = z.object({
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(200, "Title must be less than 200 characters"),
+  content: z.string().min(1, "Content is required"),
+  coverImage: z.string().optional(),
+});
+
+type BlogFormData = z.infer<typeof blogSchema>;
 
 interface BlogEditorProps {
   params: Promise<{ id: string }>;
@@ -41,13 +60,17 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const blogRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [title, setTitle] = useState("");
-  const [coverImage, setCoverImage] = useState<string>("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Stores the document JSON.
-  const [blocks, setBlocks] = useState<Block[]>([]);
+  const form = useForm<BlogFormData>({
+    resolver: zodResolver(blogSchema),
+    defaultValues: {
+      title: "",
+      content: "",
+      coverImage: "",
+    },
+  });
 
   const uploadImageHandler = async (file: File, prefix = "img") => {
     try {
@@ -70,70 +93,24 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     }
   };
 
-  const onEditorContentChange = () => {
+  const [editorContent, setEditorContent] = useState(
+    "<p>Start typing here...</p>",
+  );
+
+  const handleEditorChange = (content: string) => {
+    setEditorContent(content);
+    form.setValue("content", content);
     setHasUnsavedChanges(true);
-    // Sets the document JSON whenever the editor content changes.
-    setBlocks(editor.document);
   };
-
-  const handlePaste = ({ event, editor, defaultPasteHandler }: any) => {
-    const items = event.clipboardData?.items;
-    if (!items) return defaultPasteHandler();
-
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (file && blogRef.current) {
-          uploadImageHandler(file).then((url) => {
-            if (url) {
-              editor.insertBlocks(
-                [
-                  {
-                    type: "image",
-                    props: {
-                      url: url,
-                      caption: "",
-                    },
-                  },
-                ],
-                editor.getTextCursorPosition().block,
-                "after",
-              );
-            }
-          });
-        }
-        return true;
-      }
-    }
-
-    return defaultPasteHandler();
-  };
-
-  const editor = useCreateBlockNote({
-    initialContent:
-      blocks && blocks.length > 0
-        ? blocks
-        : [
-            {
-              type: "paragraph",
-              content: "Start typing here...",
-            },
-          ],
-    uploadFile: async (file: File) => {
-      if (!blogRef.current) return "";
-      return await uploadImageHandler(file);
-    },
-    pasteHandler: handlePaste,
-  });
 
   const debouncedSave = useMemo(
     () =>
       debounce(() => {
-        if (blogRef.current) {
+        if (blogRef.current && hasUnsavedChanges) {
           handleSave(true);
         }
-      }, 30000),
-    [],
+      }, 15000),
+    [hasUnsavedChanges],
   );
 
   useEffect(() => {
@@ -144,7 +121,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     if (hasUnsavedChanges) {
       debouncedSave();
     }
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, debouncedSave]);
 
   const initializeBlog = async () => {
     try {
@@ -158,23 +135,11 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       }
 
       blogRef.current = data;
-      setTitle(data.title || "");
-      setCoverImage(data.profileImage || "");
-
-      if (editor && data.contentJson) {
-        try {
-          const blocks = JSON.parse(data.contentJson) as PartialBlock[];
-          editor.replaceBlocks(editor.document, blocks);
-        } catch (e) {
-          // If the content is not in BlockNote JSON format, create a text block with the content
-          editor.replaceBlocks(editor.document, [
-            {
-              type: "paragraph",
-              content: data.contentJson,
-            },
-          ]);
-        }
-      }
+      form.setValue("title", data.title || "");
+      const content = data.contentHtml || "<p>Start typing here...</p>";
+      form.setValue("content", content);
+      form.setValue("coverImage", data.profileImage || "");
+      setEditorContent(content);
     } catch (error) {
       console.error("Error loading blog:", error);
       toast.error("Failed to load blog");
@@ -182,32 +147,28 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     } finally {
       setLoading(false);
     }
-
-    editor.focus();
-    setHasUnsavedChanges(false);
   };
 
   const handleSave = async (isAutoSave = false) => {
-    if (!blogRef.current || !editor || saving) return;
+    if (!blogRef.current || saving) return;
 
     setSaving(true);
     try {
-      const fixedHtml = await convertToHTML(editor);
+      const formData = form.getValues();
 
       await client.models.Blogs.update({
         id: blogRef.current.id,
-        title,
-        contentJson: JSON.stringify(editor.document),
-        contentHtml: fixedHtml,
-        profileImage: coverImage || undefined,
+        title: formData.title,
+        contentHtml: formData.content,
+        contentJson: formData.content,
+        profileImage: formData.coverImage || undefined,
       });
 
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
 
-      // show notification only when blog is manually saved
       if (!isAutoSave) {
-        toast.success("Blog saved successfully");
+        toast.success("Blog saved successfully!");
       }
     } catch (error) {
       console.error("Save failed:", error);
@@ -227,7 +188,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
     try {
       const url = await uploadImageHandler(file, "cover");
-      setCoverImage(url);
+      form.setValue("coverImage", url);
       setHasUnsavedChanges(true);
       toast.success("Cover image uploaded successfully!", {
         id: "cover-upload",
@@ -236,6 +197,27 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       console.error("Cover image upload failed:", error);
       toast.error("Failed to upload cover image", { id: "cover-upload" });
     }
+  };
+
+  const handleImageUpload = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const url = await uploadImageHandler(file);
+        if (url) {
+          // Insert image HTML directly into content
+          const imageHtml = `<img src="${url}" alt="Uploaded image" class="max-w-full h-auto rounded-lg" />`;
+          const newContent = editorContent.replace("</p>", `</p>${imageHtml}`);
+          setEditorContent(newContent);
+          form.setValue("content", newContent);
+          setHasUnsavedChanges(true);
+        }
+      }
+    };
+    input.click();
   };
 
   const togglePublishState = async () => {
@@ -348,72 +330,89 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 p-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Blog Title</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    setHasUnsavedChanges(true);
-                  }}
-                  placeholder="Enter blog title..."
+      <Form {...form}>
+        <div className="flex flex-1 flex-col gap-4 p-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Blog Title</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Enter blog title..."
+                          onChange={(e) => {
+                            field.onChange(e);
+                            setHasUnsavedChanges(true);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="coverImage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cover Image</FormLabel>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleCoverImageUpload}
+                          className="hidden"
+                          id="cover-upload"
+                        />
+                        <Button variant="outline" asChild>
+                          <label htmlFor="cover-upload">
+                            Upload Cover Image
+                          </label>
+                        </Button>
+                        {field.value && (
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={field.value}
+                              alt="Cover"
+                              className="w-16 h-16 object-cover rounded-md"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                field.onChange("");
+                                setHasUnsavedChanges(true);
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </FormItem>
+                  )}
                 />
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2">
-                <Label>Cover Image</Label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverImageUpload}
-                    className="hidden"
-                    id="cover-upload"
-                  />
-                  <Button variant="outline" asChild>
-                    <label htmlFor="cover-upload">Upload Cover Image</label>
-                  </Button>
-                  {coverImage && (
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={coverImage}
-                        alt="Cover"
-                        className="w-16 h-16 object-cover rounded-md"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setCoverImage("");
-                          setHasUnsavedChanges(true);
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-0">
-            <BlockNoteView
-              editor={editor}
-              theme="light"
-              className="min-h-[400px]"
-              onChange={onEditorContentChange}
-            />
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardContent className="p-0">
+              <TiptapEditor
+                content={editorContent}
+                onChange={handleEditorChange}
+                onImageUpload={handleImageUpload}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </Form>
     </>
   );
 }

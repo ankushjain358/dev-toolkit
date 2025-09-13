@@ -74,7 +74,7 @@ export default async function BlogPage({ params }: BlogPageProps) {
               </div>
             </header>
 
-            <div className="prose prose-lg prose-gray max-w-none">
+            <div className="prose prose-lg prose-gray max-w-none tiptap">
               {blog.contentHtml ? (
                 <div
                   className="b"
