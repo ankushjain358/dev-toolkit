@@ -97,8 +97,14 @@
 
 /* Images */
 .tiptap img {
-  max-width: 100%;
+  display: block;
   height: auto;
+  margin: 1.5rem 0;
+  max-width: 100%;
+}
+
+.tiptap img.ProseMirror-selectednode {
+  outline: 3px solid #8b5cf6;
 }
 
 /* Blockquotes */

@@ -111,8 +111,6 @@ export default function BlogsPage() {
         state: "UNPUBLISHED",
         contentJson: null,
         contentHtml: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       });
 
       if (newBlog) {
@@ -238,10 +236,10 @@ export default function BlogsPage() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {blogs.map((blog) => (
                 <Card key={blog.id} className="overflow-hidden">
-                  {blog.profileImage && (
+                  {blog.coverImage && (
                     <div className="h-48 bg-muted">
                       <img
-                        src={blog.profileImage}
+                        src={blog.coverImage}
                         alt={blog.title}
                         className="w-full h-full object-cover"
                       />

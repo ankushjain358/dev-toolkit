@@ -35,7 +35,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { cn } from "@/lib/utils";
+import { cn, generateUniqueSlug } from "@/lib/utils";
 import outputs from "@/../amplify_outputs.json";
 
 const client = generateClient<Schema>();
@@ -138,7 +138,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       form.setValue("title", data.title || "");
       const content = data.contentHtml || "<p>Start typing here...</p>";
       form.setValue("content", content);
-      form.setValue("coverImage", data.profileImage || "");
+      form.setValue("coverImage", data.coverImage || "");
       setEditorContent(content);
     } catch (error) {
       console.error("Error loading blog:", error);
@@ -152,16 +152,28 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const handleSave = async (isAutoSave = false) => {
     if (!blogRef.current || saving) return;
 
+    // Validate form before saving
+    const isValid = await form.trigger();
+    if (!isValid) {
+      if (!isAutoSave) {
+        toast.error("Please fix validation errors before saving");
+      }
+      return;
+    }
+
     setSaving(true);
     try {
       const formData = form.getValues();
 
+      const slug = await generateUniqueSlug(formData.title.trim());
+
       await client.models.Blogs.update({
         id: blogRef.current.id,
         title: formData.title,
+        slug: slug,
         contentHtml: formData.content,
         contentJson: formData.content,
-        profileImage: formData.coverImage || undefined,
+        coverImage: formData.coverImage || undefined,
       });
 
       setLastSaved(new Date());
@@ -199,29 +211,23 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     }
   };
 
-  const handleImageUpload = async () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const url = await uploadImageHandler(file);
-        if (url) {
-          // Insert image HTML directly into content
-          const imageHtml = `<img src="${url}" alt="Uploaded image" class="max-w-full h-auto rounded-lg" />`;
-          const newContent = editorContent.replace("</p>", `</p>${imageHtml}`);
-          setEditorContent(newContent);
-          form.setValue("content", newContent);
-          setHasUnsavedChanges(true);
-        }
-      }
-    };
-    input.click();
+  const handleImageUpload = async (file: File): Promise<string> => {
+    const url = await uploadImageHandler(file);
+    if (url) {
+      setHasUnsavedChanges(true);
+    }
+    return url;
   };
 
   const togglePublishState = async () => {
     if (!blogRef.current) return;
+
+    // Validate form before publishing
+    const isValid = await form.trigger();
+    if (!isValid) {
+      toast.error("Please fix validation errors before publishing");
+      return;
+    }
 
     try {
       const newState =
@@ -305,7 +311,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             <Button
               onClick={() => handleSave(false)}
               disabled={saving}
-              className="gap-2"
+              className="gap-2 cursor-pointer"
             >
               <Save className="h-4 w-4" />
               Save
@@ -317,7 +323,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                   ? "destructive"
                   : "default"
               }
-              className="gap-2"
+              className="gap-2 cursor-pointer"
             >
               {blogRef.current?.state === "PUBLISHED" ? (
                 <EyeOff className="h-4 w-4" />
@@ -376,11 +382,11 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                           </label>
                         </Button>
                         {field.value && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-start gap-4">
                             <img
                               src={field.value}
                               alt="Cover"
-                              className="w-16 h-16 object-cover rounded-md"
+                              className="max-w-48 max-h-32 object-contain rounded-md border"
                             />
                             <Button
                               variant="ghost"

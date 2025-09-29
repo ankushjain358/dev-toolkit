@@ -18,11 +18,12 @@ import {
   Redo,
   ImageIcon,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface TiptapEditorProps {
   content: string;
   onChange: (content: string) => void;
-  onImageUpload?: () => void;
+  onImageUpload?: (file: File) => Promise<string>;
 }
 
 export default function TiptapEditor({
@@ -30,6 +31,41 @@ export default function TiptapEditor({
   onChange,
   onImageUpload,
 }: TiptapEditorProps) {
+  const handleImageUpload = async (file: File) => {
+    if (!onImageUpload) return;
+
+    toast.loading("Uploading image...", { id: "image-upload" });
+
+    try {
+      const url = await onImageUpload(file);
+      if (url && editor) {
+        editor.chain().focus().setImage({ src: url }).run();
+        toast.success("Image uploaded successfully!", { id: "image-upload" });
+      }
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      toast.error("Failed to upload image", { id: "image-upload" });
+    }
+  };
+
+  const handlePaste = (view: any, event: ClipboardEvent) => {
+    const items = event.clipboardData?.items;
+    if (!items) return false;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf("image") !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          event.preventDefault();
+          handleImageUpload(file);
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -52,6 +88,9 @@ export default function TiptapEditor({
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
+    },
+    editorProps: {
+      handlePaste,
     },
   });
 
@@ -177,7 +216,18 @@ export default function TiptapEditor({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={onImageUpload}
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) {
+                  handleImageUpload(file);
+                }
+              };
+              input.click();
+            }}
           >
             <ImageIcon className="h-4 w-4" />
           </Button>

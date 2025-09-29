@@ -1,6 +1,19 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { postConfirmation } from "../auth/post-confirmation/resource";
 
+// *** How allow.ownerDefinedIn works? ***
+// You cannot create items for other users - Amplify enforces that the owner field value must match the current authenticated user's Cognito sub.
+// This authorization enforcement happens at the VTL (Velocity Template Language) level in AppSync.
+//
+// ## Check if userId matches current user's cognito sub
+// #if( $ctx.identity.sub != $ctx.args.input.userId )
+//   $util.unauthorized()
+// #end
+//
+// With allow.owner("userId"):
+// User can only create blogs where userId = their Cognito sub
+// User can only read/update/delete blogs where userId = their Cognito sub
+
 const schema = a
   .schema({
     Users: a
@@ -8,13 +21,11 @@ const schema = a
         id: a.id().required(),
         email: a.string().required(),
         cognito_subs: a.string().array().required(),
-        createdAt: a.datetime(),
-        updatedAt: a.datetime(),
       })
       .secondaryIndexes((index) => [
         index("email"), // GSI on email field
       ])
-      .authorization((allow) => [allow.authenticated()]),
+      .authorization((allow) => [allow.ownerDefinedIn("id")]),
 
     Blogs: a
       .model({
@@ -25,19 +36,18 @@ const schema = a
         state: a.enum(["UNPUBLISHED", "PUBLISHED"]),
         contentJson: a.string(), // JSON content from Tiptap
         contentHtml: a.string(), // HTML content from Tiptap
-        profileImage: a.string(), // S3 key for cover image
-        createdAt: a.datetime().required(),
-        updatedAt: a.datetime().required(),
+        coverImage: a.string(), // S3 key for cover image
       })
       .secondaryIndexes((index) => [
         index("slug"), // GSI on slug field for fast lookups
         index("userId"), // GSI on userId to query user's blogs
       ])
       .authorization((allow) => [
-        allow.authenticated(),
+        allow.ownerDefinedIn("userId"),
         allow.guest().to(["read"]), // Guests can read all blogs, filtering done in app logic
       ]),
   })
+  // [Global authorization rule]
   .authorization((allow) => [allow.resource(postConfirmation)]);
 
 export type Schema = ClientSchema<typeof schema>;
