@@ -5,8 +5,19 @@ import type { Schema } from "@/../amplify/data/resource";
 import { useEffect, useState } from "react";
 import { getCurrentUser } from "aws-amplify/auth";
 import Link from "next/link";
-import { Plus, Edit, Trash2, Eye, EyeOff, ExternalLink } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  MoreHorizontal,
+} from "lucide-react";
 import toast from "react-hot-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   generateUniqueSlug,
   formatDate,
@@ -15,12 +26,6 @@ import {
   Nullable,
   cn,
 } from "@/lib/utils";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,15 +39,60 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 
 const client = generateClient<Schema>();
 
 type Blog = Schema["Blogs"]["type"];
 
+const blogSchema = z.object({
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(200, "Title must be less than 200 characters"),
+});
+
+type BlogFormData = z.infer<typeof blogSchema>;
+
 export default function BlogsPage() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const form = useForm<BlogFormData>({
+    resolver: zodResolver(blogSchema),
+    defaultValues: {
+      title: "",
+    },
+  });
 
   useEffect(() => {
     initializeUser();
@@ -95,18 +145,17 @@ export default function BlogsPage() {
     }
   };
 
-  const createBlog = async () => {
-    const title = prompt("Enter blog title:");
-    if (!title?.trim() || !currentUserId) return;
+  const createBlog = async (data: BlogFormData) => {
+    if (!currentUserId) return;
 
     try {
       toast.loading("Creating blog...", { id: "create-blog" });
 
-      const slug = await generateUniqueSlug(title.trim());
+      const slug = await generateUniqueSlug(data.title.trim());
 
       const { data: newBlog } = await client.models.Blogs.create({
         userId: currentUserId,
-        title: title.trim(),
+        title: data.title.trim(),
         slug,
         state: "UNPUBLISHED",
         contentJson: null,
@@ -116,6 +165,8 @@ export default function BlogsPage() {
       if (newBlog) {
         setBlogs((prev) => [newBlog as Blog, ...prev]);
         toast.success("Blog created successfully!", { id: "create-blog" });
+        setDialogOpen(false);
+        form.reset();
       }
     } catch (error) {
       console.error("Error creating blog:", error);
@@ -208,9 +259,51 @@ export default function BlogsPage() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <Button onClick={createBlog} className="gap-2">
-            <Plus className="h-4 w-4" /> Write
-          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 cursor-pointer">
+                <Plus className="h-4 w-4" /> Write
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Blog</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(createBlog)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Blog Title</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter blog title..." />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDialogOpen(false)}
+                      className="cursor-pointer"
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="cursor-pointer">
+                      Create Blog
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </header>
 
@@ -223,95 +316,153 @@ export default function BlogsPage() {
             <Alert>
               <AlertDescription className="flex flex-col items-center gap-4 py-8">
                 <p>No blogs yet. Create your first blog to get started!</p>
-                <Button
-                  onClick={createBlog}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" /> Create Your First Blog
-                </Button>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2 cursor-pointer">
+                      <Plus className="h-4 w-4" /> Create Your First Blog
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New Blog</DialogTitle>
+                    </DialogHeader>
+                    <Form {...form}>
+                      <form
+                        onSubmit={form.handleSubmit(createBlog)}
+                        className="space-y-4"
+                      >
+                        <FormField
+                          control={form.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Blog Title</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="Enter blog title..."
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setDialogOpen(false)}
+                            className="cursor-pointer"
+                          >
+                            Cancel
+                          </Button>
+                          <Button type="submit" className="cursor-pointer">
+                            Create Blog
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-4">
               {blogs.map((blog) => (
-                <Card key={blog.id} className="overflow-hidden">
-                  {blog.coverImage && (
-                    <div className="h-48 bg-muted">
+                <div
+                  key={blog.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    {blog.coverImage && (
                       <img
                         src={blog.coverImage}
                         alt={blog.title}
-                        className="w-full h-full object-cover"
+                        className="w-16 h-16 object-cover rounded-md"
                       />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold truncate">{blog.title}</h3>
+                        <span
+                          className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium shrink-0",
+                            blog.state === "PUBLISHED"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800",
+                          )}
+                        >
+                          {blog.state}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                        {getContentPreview(blog.contentHtml)}
+                      </p>
+                      <div className="text-xs text-muted-foreground">
+                        <span>Created: {formatDate(blog.createdAt)}</span>
+                        <span className="mx-2">•</span>
+                        <span>/{blog.slug}</span>
+                      </div>
                     </div>
-                  )}
-
-                  <CardHeader className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <h3 className="font-semibold line-clamp-2">
-                        {blog.title}
-                      </h3>
-                      <span
-                        className={cn(
-                          "px-2 py-1 rounded-full text-xs font-medium",
-                          blog.state === "PUBLISHED"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800",
-                        )}
-                      >
-                        {blog.state}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {getContentPreview(blog.contentHtml)}
-                    </p>
-                  </CardHeader>
-
-                  <CardContent>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <p>Created: {formatDate(blog.createdAt)}</p>
-                      <p className="truncate">/{blog.slug}</p>
-                    </div>
-                  </CardContent>
-
-                  <CardFooter className="justify-between border-t pt-4">
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/me/blogs/edit/${blog.id}`}>
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => toggleBlogState(blog)}
-                      >
-                        {blog.state === "PUBLISHED" ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-
-                      {blog.state === "PUBLISHED" && (
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/blog/${blog.slug}`} target="_blank">
-                            <ExternalLink className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteBlog(blog)}
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="cursor-pointer"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Link href={`/me/blogs/edit/${blog.id}`}>
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Link>
                     </Button>
-                  </CardFooter>
-                </Card>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => toggleBlogState(blog)}
+                          className="cursor-pointer"
+                        >
+                          {blog.state === "PUBLISHED" ? (
+                            <>
+                              <EyeOff className="h-4 w-4 mr-2" />
+                              Unpublish
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Publish
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        {blog.state === "PUBLISHED" && (
+                          <DropdownMenuItem asChild className="cursor-pointer">
+                            <Link href={`/blog/${blog.slug}`} target="_blank">
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              View Live
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          onClick={() => deleteBlog(blog)}
+                          className="text-destructive cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
               ))}
             </div>
           )}
