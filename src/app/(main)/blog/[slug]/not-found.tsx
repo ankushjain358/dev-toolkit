@@ -8,7 +8,7 @@ export default function NotFound() {
           Blog Not Found
         </h1>
         <p className="text-gray-600 mb-6">
-          The blog post you're looking for doesn't exist or has been
+          The blog post you are looking for does not exist or has been
           unpublished.
         </p>
         <Link

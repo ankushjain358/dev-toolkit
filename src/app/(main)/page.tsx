@@ -73,17 +73,17 @@ export default async function HomePage() {
                 </h2>
                 <article className="bg-white rounded-lg shadow-lg overflow-hidden">
                   <div className="md:flex">
-                    {blogs[0].profileImage && (
+                    {blogs[0].coverImage && (
                       <div className="md:w-1/2 h-64 md:h-auto bg-gray-200">
                         <img
-                          src={blogs[0].profileImage}
+                          src={blogs[0].coverImage}
                           alt={blogs[0].title}
                           className="w-full h-full object-cover"
                         />
                       </div>
                     )}
                     <div
-                      className={`p-8 ${blogs[0].profileImage ? "md:w-1/2" : "w-full"}`}
+                      className={`p-8 ${blogs[0].coverImage ? "md:w-1/2" : "w-full"}`}
                     >
                       <h3 className="text-2xl font-bold text-gray-900 mb-3">
                         <Link
@@ -125,10 +125,10 @@ export default async function HomePage() {
                       key={blog.id}
                       className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
                     >
-                      {blog.profileImage && (
+                      {blog.coverImage && (
                         <div className="h-48 bg-gray-200">
                           <img
-                            src={blog.profileImage}
+                            src={blog.coverImage}
                             alt={blog.title}
                             className="w-full h-full object-cover"
                           />

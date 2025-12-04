@@ -88,10 +88,10 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
       setBlog(data);
       setTitle(data.title);
-      setCoverImage(data.profileImage || "");
+      setCoverImage(data.coverImage || "");
 
       if (editor) {
-        editor.commands.setContent(data.content || "");
+        editor.commands.setContent(data.contentHtml || "");
       }
     } catch (error) {
       console.error("Error loading blog:", error);
@@ -107,14 +107,16 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
     setSaving(true);
     try {
-      const content = editor.getHTML();
+      const contentHtml = editor.getHTML();
+      const contentJson = editor.getJSON();
 
-      await client.models.Blogs.update({
-        id: blog.id,
-        title,
-        content,
-        profileImage: coverImage || undefined,
-      });
+      // await client.models.Blogs.update({
+      //   id: blog.id,
+      //   title,
+      //   contentHtml: contentHtml,
+      //   contentJson: contentJson,
+      //   coverImage: coverImage || undefined,
+      // });
 
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
@@ -134,12 +136,12 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     try {
       const content = editor.getHTML();
 
-      await client.models.Blogs.update({
-        id: blog.id,
-        title,
-        content,
-        profileImage: coverImage || undefined,
-      });
+      // await client.models.Blogs.update({
+      //   id: blog.id,
+      //   title,
+      //   contentHtml: content,
+      //   profileImage: coverImage || undefined,
+      // });
 
       setLastSaved(new Date());
       setHasUnsavedChanges(false);

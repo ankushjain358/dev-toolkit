@@ -94,18 +94,27 @@ export default function TiptapEditor({
     },
   });
 
+  const editorState = useEditorState({
+    editor,
+    selector: (ctx) => ({
+      isBold: ctx.editor?.isActive("bold") ?? false,
+      isItalic: ctx.editor?.isActive("italic") ?? false,
+      isStrike: ctx.editor?.isActive("strike") ?? false,
+      isCode: ctx.editor?.isActive("code") ?? false,
+      canUndo: ctx.editor?.can().chain().focus().undo().run() ?? false,
+      canRedo: ctx.editor?.can().chain().focus().redo().run() ?? false,
+    }),
+  });
+
   const { isBold, isItalic, isStrike, isCode, canUndo, canRedo } =
-    useEditorState({
-      editor,
-      selector: (ctx) => ({
-        isBold: ctx.editor?.isActive("bold") ?? false,
-        isItalic: ctx.editor?.isActive("italic") ?? false,
-        isStrike: ctx.editor?.isActive("strike") ?? false,
-        isCode: ctx.editor?.isActive("code") ?? false,
-        canUndo: ctx.editor?.can().chain().focus().undo().run() ?? false,
-        canRedo: ctx.editor?.can().chain().focus().redo().run() ?? false,
-      }),
-    });
+    editorState || {
+      isBold: false,
+      isItalic: false,
+      isStrike: false,
+      isCode: false,
+      canUndo: false,
+      canRedo: false,
+    };
 
   if (!editor) {
     return null;

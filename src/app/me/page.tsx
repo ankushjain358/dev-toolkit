@@ -42,7 +42,7 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold">Welcome Back</h1>
         <p className="text-muted-foreground">
-          Here's an overview of your dev tools
+          Here is an overview of your dev tools
         </p>
       </div>
 

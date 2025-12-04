@@ -18,13 +18,13 @@ Amplify.configure(resourceConfig, libraryOptions);
 const client = generateClient<Schema>();
 
 export const handler: PostConfirmationTriggerHandler = async (event) => {
-  let email = event.request.userAttributes.email;
-  let sub = event.request.userAttributes.sub;
-  let userList = await client.models.Users.listUsersByEmail({ email });
-  let userExists = userList?.data?.length > 0;
+  const email = event.request.userAttributes.email;
+  const sub = event.request.userAttributes.sub;
+  const userList = await client.models.Users.listUsersByEmail({ email });
+  const userExists = userList?.data?.length > 0;
 
   if (userExists) {
-    let existingUser = userList.data[0];
+    const existingUser = userList.data[0];
     if (existingUser.cognito_subs.indexOf(sub) == -1) {
       existingUser.cognito_subs.push(sub);
       await client.models.Users.update({
