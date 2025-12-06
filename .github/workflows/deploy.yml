@@ -1,0 +1,49 @@
+name: Deploy Amplify Backend
+
+on:
+  push:
+    branches:
+      - dev
+      - prod
+
+# Permission can be added at job level or workflow level    
+permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+
+env:
+  AWS_REGION: ap-south-1
+  NODE_VERSION: '24.x'  
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.GITHUB_OIDC_IAM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy backend
+        run: npx ampx pipeline-deploy --branch ${{ github.ref_name }} --app-id ${{ vars.AMPLIFY_APP_ID }}
+
+      - name: Trigger frontend deployment
+        run: |
+          curl -X POST ${{ vars.AMPLIFY_WEBHOOK_URL }}
