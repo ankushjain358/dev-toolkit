@@ -46,4 +46,4 @@ jobs:
 
       - name: Trigger frontend deployment
         run: |
-          curl -X POST -d {} ${{ secrets.AMPLIFY_WEBHOOK_URL }} -H "Content-Type:application/json"
+          curl -X POST -d {} "${{ secrets.AMPLIFY_WEBHOOK_URL }}" -H "Content-Type: application/json"
