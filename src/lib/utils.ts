@@ -8,6 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 /* End: Tailwind section */
 
 import { generateClient } from "aws-amplify/data";
+import { getCurrentUser } from "aws-amplify/auth";
 import type { Schema } from "@/../amplify/data/resource";
 
 const client = generateClient<Schema>();
@@ -36,8 +37,8 @@ export async function generateUniqueSlug(baseTitle: string): Promise<string> {
 
 export async function slugExists(slug: string): Promise<boolean> {
   try {
-    const { data } = await client.models.Blogs.list({
-      filter: { slug: { eq: slug } },
+    const { data } = await client.models.Blogs.listBlogsBySlug({
+      slug,
     });
     return (data?.length || 0) > 0;
   } catch (error) {
@@ -82,4 +83,21 @@ export async function convertToHTML(editor: any) {
     '<p class="bn-inline-content"><br></p>',
   );
   return fixedHtml;
+}
+
+export async function initializeUserGetId(): Promise<string> {
+  try {
+    const user = await getCurrentUser();
+    const email = user.signInDetails?.loginId || user.username;
+    const userList = await client.models.Users.listUsersByEmail({ email });
+
+    if (userList?.data?.length > 0) {
+      return userList.data[0].id;
+    }
+
+    throw new Error("User not found after authentication");
+  } catch (error) {
+    console.error("Error initializing user:", error);
+    throw error;
+  }
 }

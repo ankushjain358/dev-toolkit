@@ -12,7 +12,7 @@ Clone the
 
 1. Clone the repository on your local machine.
 2. Run `npm install` to install dependencies.
-3. Configure AWS Profile
+3. Configure AWS credentials by running `aws configure` or setting environment variables.
 4. Run `npx ampx sandbox` to provision backend infra in AWS.
 5. Run `npm run dev` to run the app.
 6. Open `http://localhost:3000` with your browser to see the result.

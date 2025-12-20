@@ -3,7 +3,6 @@
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/../amplify/data/resource";
 import { useEffect, useState } from "react";
-import { getCurrentUser } from "aws-amplify/auth";
 import Link from "next/link";
 import {
   Plus,
@@ -19,6 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
+  initializeUserGetId,
   generateUniqueSlug,
   formatDate,
   stripHtml,
@@ -61,12 +61,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
+import { orderBy } from "lodash";
 
 const client = generateClient<Schema>();
 
@@ -95,49 +90,41 @@ export default function BlogsPage() {
   });
 
   useEffect(() => {
-    initializeUser();
-  }, []);
-
-  const initializeUser = async () => {
-    try {
-      const user = await getCurrentUser();
-      const email = user.signInDetails?.loginId || user.username;
-      const userId = await getOrCreateUser(email);
-      setCurrentUserId(userId);
-      await fetchBlogs(userId);
-    } catch (error) {
-      console.error("Error initializing user:", error);
-      toast.error("Failed to initialize user");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getOrCreateUser = async (email: string): Promise<string> => {
-    try {
-      const userList = await client.models.Users.listUsersByEmail({ email });
-
-      if (userList?.data?.length > 0) {
-        return userList.data[0].id;
+    // Use IIFE to invoke async code inside useEffect
+    (async () => {
+      try {
+        const userId = await initializeUserGetId();
+        setCurrentUserId(userId);
+        await fetchBlogs(userId);
+      } catch (error) {
+        console.error("Error initializing user:", error);
+        toast.error("Failed to initialize user");
+      } finally {
+        setLoading(false);
       }
-
-      throw new Error("User not found after authentication");
-    } catch (error) {
-      console.error("Error getting user:", error);
-      throw error;
-    }
-  };
+    })();
+  }, []);
 
   const fetchBlogs = async (userId: string) => {
     try {
-      const { data } = await client.models.Blogs.list({
-        filter: { userId: { eq: userId } },
-      });
+      let allBlogs: Blog[] = [];
+      let nextToken: string | undefined | null;
 
-      const sortedBlogs = (data || []).sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
+      do {
+        const { data, nextToken: token } =
+          await client.models.Blogs.listBlogsByUserId(
+            {
+              userId,
+            },
+            nextToken ? { nextToken } : undefined,
+          );
+
+        allBlogs = [...allBlogs, ...(data || [])];
+        nextToken = token;
+      } while (nextToken);
+
+      const sortedBlogs = orderBy(allBlogs, ["createdAt"], ["desc"]);
+
       setBlogs(sortedBlogs);
     } catch (error) {
       console.error("Error fetching blogs:", error);
@@ -220,19 +207,36 @@ export default function BlogsPage() {
         <Skeleton className="h-8 w-[200px]" />
         <Skeleton className="h-10 w-[100px]" />
       </div>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-5 w-2/3" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-20 w-full" />
-            </CardContent>
-            <CardFooter>
-              <Skeleton className="h-8 w-full" />
-            </CardFooter>
-          </Card>
+          <div
+            key={i}
+            className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
+          >
+            <div className="flex items-center gap-4 flex-1">
+              <div className="w-16 h-16 rounded-md overflow-hidden">
+                <Skeleton className="h-16 w-16" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-5 w-20" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  <Skeleton className="h-3 w-24 inline-block mr-2" />
+                  <Skeleton className="h-3 w-16 inline-block" />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-8 w-8" />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -251,7 +255,9 @@ export default function BlogsPage() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="/me">Dashboard</BreadcrumbLink>
+                <BreadcrumbLink asChild>
+                  <Link href="/me">Dashboard</Link>
+                </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>

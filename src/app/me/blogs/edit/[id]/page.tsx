@@ -282,11 +282,15 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="/me">Dashboard</BreadcrumbLink>
+                <BreadcrumbLink asChild>
+                  <Link href="/me">Dashboard</Link>
+                </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbLink href="/me/blogs">Blogs</BreadcrumbLink>
+                <BreadcrumbLink asChild>
+                  <Link href="/me/blogs">Blogs</Link>
+                </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
