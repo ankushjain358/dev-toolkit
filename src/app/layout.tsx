@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import "@aws-amplify/ui-react/styles.css";
 import ConfigureAmplifyClientSide from "@/components/ConfigureAmplifyClientSide";
+import QueryProvider from "@/components/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,17 +37,19 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ConfigureAmplifyClientSide />
-        {children}
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            duration: 2000,
-            style: {
-              background: "#363636",
-              color: "#fff",
-            },
-          }}
-        />
+        <QueryProvider>
+          {children}
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              duration: 2000,
+              style: {
+                background: "#363636",
+                color: "#fff",
+              },
+            }}
+          />
+        </QueryProvider>
       </body>
     </html>
   );

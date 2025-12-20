@@ -24,6 +24,43 @@ Clone the
 
 ## Architecture
 
+## Code Quality & Hooks ✅
+
+To keep code consistent and maintainable, this project uses the following tools:
+
+- **ESLint** — static code analysis to catch problems and enforce code style rules.
+- **Prettier** — automatic code formatting to keep formatting consistent across the project.
+- **Husky + lint-staged** — runs linters and Prettier on changed files as a pre-commit hook, ensuring only linted/formatted files are committed.
+
+### Running hooks / tools manually
+
+- Run the pre-commit hooks manually:
+
+  ```bash
+  git hook run pre-commit
+  ```
+
+- Format the repository (warning: may take a while for larger projects):
+
+  ```bash
+  npx prettier . --write
+  ```
+
+  You can scope formatting to a directory or file to save time, e.g.:
+
+  ```bash
+  prettier --write app/
+  prettier --write app/components/Button.js
+  ```
+
+- Run ESLint with auto-fix:
+
+  ```bash
+  eslint . --fix
+  ```
+
+> Tip: Run `npx prettier . --write` followed by `eslint . --fix` to format and fix code before committing.
+
 ## Key Technical Decisions
 
 1. For blog images, CloudFront is configured with `/public` prefix to redirect requests to S3.
