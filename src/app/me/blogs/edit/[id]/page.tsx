@@ -36,6 +36,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { cn, generateUniqueSlug } from "@/lib/utils";
+import { QUERY_KEYS } from "@/lib/app-constants";
+import { useQueryClient } from "@tanstack/react-query";
 import outputs from "@/../amplify_outputs.json";
 
 const client = generateClient<Schema>();
@@ -57,6 +59,7 @@ interface BlogEditorProps {
 
 export default function BlogEditorPage({ params }: BlogEditorProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const blogRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -165,7 +168,10 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     try {
       const formData = form.getValues();
 
-      const slug = await generateUniqueSlug(formData.title.trim());
+      const slug = await generateUniqueSlug(
+        formData.title.trim(),
+        blogRef.current.id,
+      );
 
       await client.models.Blogs.update({
         id: blogRef.current.id,
@@ -178,6 +184,11 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
+
+      // Invalidate blogs cache to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.BLOGS(blogRef.current.userId),
+      });
 
       if (!isAutoSave) {
         toast.success("Blog saved successfully!");
@@ -239,6 +250,12 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       });
 
       blogRef.current = { ...blogRef.current, state: newState };
+
+      // Invalidate blogs cache to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.BLOGS(blogRef.current.userId),
+      });
+
       toast.success(`Blog ${newState.toLowerCase()} successfully!`);
     } catch (error) {
       console.error("Failed to update blog state:", error);
@@ -412,15 +429,15 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-0">
-              <TiptapEditor
-                content={editorContent}
-                onChange={handleEditorChange}
-                onImageUpload={handleImageUpload}
-              />
-            </CardContent>
-          </Card>
+          {/* <Card>
+            <CardContent className="p-0"> */}
+          <TiptapEditor
+            content={editorContent}
+            onChange={handleEditorChange}
+            onImageUpload={handleImageUpload}
+          />
+          {/* </CardContent>
+          </Card> */}
         </div>
       </Form>
     </>

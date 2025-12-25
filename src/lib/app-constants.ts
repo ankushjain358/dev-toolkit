@@ -9,3 +9,15 @@ export const APP_CONSTANTS: AppConstants = {
   VERSION: "1.0.0",
   TIMEOUT_MS: 5000,
 };
+
+/**
+ * React Query keys for consistent cache management
+ */
+export const QUERY_KEYS = {
+  // User queries
+  CURRENT_USER_ID: ["currentUserId"] as const,
+
+  // Blog queries
+  BLOGS: (userId: string) => ["blogs", userId] as const,
+  BLOG_BY_ID: (blogId: string) => ["blog", blogId] as const,
+} as const;

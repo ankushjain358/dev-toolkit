@@ -63,6 +63,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { orderBy } from "lodash";
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/app-constants";
 
 const client = generateClient<Schema>();
 
@@ -115,7 +116,7 @@ export default function BlogsPage() {
     isError: isUserError,
     error: userError,
   } = useQuery({
-    queryKey: ["currentUserId"],
+    queryKey: QUERY_KEYS.CURRENT_USER_ID,
     queryFn: initializeUserGetId,
     retry: false,
   });
@@ -130,7 +131,7 @@ export default function BlogsPage() {
     error: blogsError,
     refetch: refetchBlogs,
   } = useQuery({
-    queryKey: ["blogs", userId],
+    queryKey: QUERY_KEYS.BLOGS(userId!),
     queryFn: () => fetchBlogs(userId!),
     enabled: !!userId, // dependent query
     retry: false,
