@@ -8,6 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 /* End: Tailwind section */
 
 import { generateClient } from "aws-amplify/data";
+import { getCurrentUser } from "aws-amplify/auth";
 import type { Schema } from "@/../amplify/data/resource";
 
 const client = generateClient<Schema>();
@@ -22,11 +23,24 @@ export function generateSlug(title: string): string {
     .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
 }
 
-export async function generateUniqueSlug(baseTitle: string): Promise<string> {
+/**
+ * Generates a unique slug from a title, avoiding conflicts with existing blogs
+ * @param baseTitle - The blog title to convert to slug
+ * @param blogId - Optional blog ID to exclude from uniqueness check (for updates)
+ * @returns Promise<string> - A unique slug
+ */
+export async function generateUniqueSlug(
+  baseTitle: string,
+  blogId?: string,
+): Promise<string> {
   let slug = generateSlug(baseTitle);
   let counter = 1;
 
-  while (await slugExists(slug)) {
+  while (true) {
+    const [exists, existingId] = await slugExists(slug);
+    // Break if slug doesn't exist OR if it belongs to the same blog being updated
+    if (!exists || existingId === blogId) break;
+
     slug = `${generateSlug(baseTitle)}-${counter}`;
     counter++;
   }
@@ -34,15 +48,26 @@ export async function generateUniqueSlug(baseTitle: string): Promise<string> {
   return slug;
 }
 
-export async function slugExists(slug: string): Promise<boolean> {
+/**
+ * Checks if a slug exists in the database
+ * @param slug - The slug to check
+ * @returns Promise<[boolean, string | null]> - Tuple of [exists, blogId]
+ */
+export async function slugExists(
+  slug: string,
+): Promise<[boolean, string | null]> {
   try {
-    const { data } = await client.models.Blogs.list({
-      filter: { slug: { eq: slug } },
+    const { data } = await client.models.Blogs.listBlogsBySlug({
+      slug,
     });
-    return (data?.length || 0) > 0;
+
+    if ((data?.length || 0) > 0) {
+      return [true, data[0].id]; // Return existence and blog ID
+    }
+    return [false, null]; // Slug is available
   } catch (error) {
     console.error("Error checking slug existence:", error);
-    return false;
+    return [false, null];
   }
 }
 
@@ -82,4 +107,21 @@ export async function convertToHTML(editor: any) {
     '<p class="bn-inline-content"><br></p>',
   );
   return fixedHtml;
+}
+
+export async function initializeUserGetId(): Promise<string> {
+  try {
+    const user = await getCurrentUser();
+    const email = user.signInDetails?.loginId || user.username;
+    const userList = await client.models.Users.listUsersByEmail({ email });
+
+    if (userList?.data?.length > 0) {
+      return userList.data[0].id;
+    }
+
+    throw new Error("User not found after authentication");
+  } catch (error) {
+    console.error("Error initializing user:", error);
+    throw error;
+  }
 }

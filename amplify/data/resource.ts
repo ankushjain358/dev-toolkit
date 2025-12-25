@@ -27,6 +27,11 @@ const schema = a
       ])
       .authorization((allow) => [allow.ownerDefinedIn("id")]),
 
+    Tag: a.customType({
+      name: a.string().required(),
+      slug: a.string().required(),
+    }),
+
     Blogs: a
       .model({
         id: a.id().required(), // This will be the BLOGID
@@ -37,14 +42,30 @@ const schema = a
         contentJson: a.string(), // JSON content from Tiptap
         contentHtml: a.string(), // HTML content from Tiptap
         coverImage: a.string(), // S3 key for cover image
+        tags: a.ref("Tag").array(), // Tags attached to this blog
       })
       .secondaryIndexes((index) => [
         index("slug"), // GSI on slug field for fast lookups
         index("userId"), // GSI on userId to query user's blogs
       ])
       .authorization((allow) => [
-        allow.ownerDefinedIn("userId"),
+        allow.ownerDefinedIn("userId"), // Allow signed-in user to create, read, update, and delete their __OWN__ posts.
         allow.guest().to(["read"]), // Guests can read all blogs, filtering done in app logic
+      ]),
+
+    TagReferences: a
+      .model({
+        id: a.id().required(),
+        slug: a.string().required(), // Partition key
+        ref: a.string().required(), // Sort key pattern: Blog#<blogId>
+      })
+      .secondaryIndexes((index) => [
+        index("slug").sortKeys(["ref"]), // GSI on slug with ref as sort key
+        index("ref"), // GSI on ref as partition key
+      ])
+      .authorization((allow) => [
+        allow.authenticated().to(["read", "create", "delete"]),
+        allow.guest().to(["read"]),
       ]),
   })
   // [Global authorization rule]
