@@ -14,6 +14,7 @@ Clone the
 2. Run `npm install` to install dependencies.
 3. Configure AWS credentials by running `aws configure` or setting environment variables.
 4. Run `npx ampx sandbox` to provision backend infra in AWS.
+   > When you deploy a cloud sandbox, Amplify creates an AWS CloudFormation stack following the naming convention of `amplify-<app-name>-<$(whoami)>-sandbox` in your AWS account with the resources configured in your amplify/ folder.
 5. Run `npm run dev` to run the app.
 6. Open `http://localhost:3000` with your browser to see the result.
 
