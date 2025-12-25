@@ -62,7 +62,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { orderBy } from "lodash";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/app-constants";
 
 const client = generateClient<Schema>();
@@ -99,6 +99,7 @@ async function fetchBlogs(userId: string): Promise<Blog[]> {
 
 export default function BlogsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm<BlogFormData>({
     resolver: zodResolver(blogSchema),
@@ -189,7 +190,7 @@ export default function BlogsPage() {
       });
 
       if (newBlog) {
-        refetchBlogs(); // Refetch blogs after creating
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BLOGS(userId) });
         toast.success("Blog created successfully!", { id: "create-blog" });
         setDialogOpen(false);
         form.reset();
@@ -210,7 +211,7 @@ export default function BlogsPage() {
       });
 
       if (updatedBlog) {
-        refetchBlogs(); // Refetch blogs after updating
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BLOGS(userId!) });
         toast.success(`Blog ${newState.toLowerCase()} successfully!`);
       }
     } catch (error) {
@@ -223,8 +224,19 @@ export default function BlogsPage() {
     if (!confirm(`Are you sure you want to delete "${blog.title}"?`)) return;
 
     try {
+      // Delete associated tag references first
+      const { data: tagRefs } =
+        await client.models.TagReferences.listTagReferencesByRef({
+          ref: `BLOG#${blog.id}`,
+        });
+
+      for (const ref of tagRefs || []) {
+        await client.models.TagReferences.delete({ id: ref.id });
+      }
+
+      // Then delete the blog
       await client.models.Blogs.delete({ id: blog.id });
-      refetchBlogs(); // Refetch blogs after deleting
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BLOGS(userId!) });
       toast.success("Blog deleted successfully!");
     } catch (error) {
       console.error("Error deleting blog:", error);

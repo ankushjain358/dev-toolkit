@@ -60,6 +60,14 @@ const blogSchema = z.object({
   coverImage: z.string().optional(),
 });
 
+const tagSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Tag name is required")
+    .max(50, "Tag name must be less than 50 characters"),
+});
+
+type TagFormData = z.infer<typeof tagSchema>;
 type BlogFormData = z.infer<typeof blogSchema>;
 
 type Tag = {
@@ -82,7 +90,13 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isEditingTags, setIsEditingTags] = useState(false);
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
-  const [newTagName, setNewTagName] = useState("");
+
+  const tagForm = useForm<TagFormData>({
+    resolver: zodResolver(tagSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
 
   const form = useForm<BlogFormData>({
     resolver: zodResolver(blogSchema),
@@ -282,15 +296,13 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     }
   };
 
-  const addTag = () => {
-    const trimmedName = newTagName.trim();
-    if (!trimmedName) return;
-
+  const addTag = async (data: TagFormData) => {
+    const trimmedName = data.name.trim();
     const slug = generateSlug(trimmedName);
 
     // Check for duplicate
     if (tags.some((tag) => tag.slug === slug)) {
-      toast.error("Tag already exists");
+      tagForm.setError("name", { message: "Tag already exists" });
       return;
     }
 
@@ -300,7 +312,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     };
 
     setTags((prev) => [...prev, newTag]);
-    setNewTagName("");
+    tagForm.reset();
     setTagDialogOpen(false);
   };
 
@@ -308,6 +320,8 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     setTags((prev) => prev.filter((tag) => tag.slug !== slugToRemove));
   };
 
+  // This could be improved later using batch operations
+  // https://docs.amplify.aws/react/build-a-backend/data/custom-business-logic/batch-ddb-operations/
   const saveTags = async () => {
     if (!blogRef.current) return;
 
@@ -526,7 +540,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => setIsEditingTags(true)}
-                        className="gap-2"
+                        className="gap-2 cursor-pointer"
                       >
                         <Edit className="h-4 w-4" />
                         Edit Tags
@@ -541,6 +555,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                             setTags(blogRef.current?.tags || []);
                             setIsEditingTags(false);
                           }}
+                          className="cursor-pointer"
                         >
                           Cancel
                         </Button>
@@ -549,6 +564,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                           size="sm"
                           onClick={saveTags}
                           disabled={saving}
+                          className="cursor-pointer"
                         >
                           Save Tags
                         </Button>
@@ -592,52 +608,52 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="gap-1 h-6"
+                            className="gap-1 h-6 cursor-pointer"
                           >
                             <Plus className="h-3 w-3" />
-                            Add Tag
+                            <small>Add Tag</small>
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle>Add New Tag</DialogTitle>
                           </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="tagName">Tag Name</Label>
-                              <Input
-                                id="tagName"
-                                value={newTagName}
-                                onChange={(e) => setNewTagName(e.target.value)}
-                                placeholder="Enter tag name..."
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    addTag();
-                                  }
-                                }}
+                          <Form {...tagForm}>
+                            <form
+                              onSubmit={tagForm.handleSubmit(addTag)}
+                              className="space-y-4"
+                            >
+                              <FormField
+                                control={tagForm.control}
+                                name="name"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Tag Name</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        placeholder="Enter tag name..."
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
                               />
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => {
-                                  setNewTagName("");
-                                  setTagDialogOpen(false);
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                type="button"
-                                onClick={addTag}
-                                disabled={!newTagName.trim()}
-                              >
-                                Add Tag
-                              </Button>
-                            </div>
-                          </div>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => {
+                                    tagForm.reset();
+                                    setTagDialogOpen(false);
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button type="submit">Add Tag</Button>
+                              </div>
+                            </form>
+                          </Form>
                         </DialogContent>
                       </Dialog>
                     )}
