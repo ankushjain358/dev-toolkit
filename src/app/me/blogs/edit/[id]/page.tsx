@@ -35,9 +35,18 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { cn, generateUniqueSlug } from "@/lib/utils";
+import { cn, generateUniqueSlug, generateSlug } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/app-constants";
 import { useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Edit, Plus, X } from "lucide-react";
 import outputs from "@/../amplify_outputs.json";
 
 const client = generateClient<Schema>();
@@ -53,6 +62,11 @@ const blogSchema = z.object({
 
 type BlogFormData = z.infer<typeof blogSchema>;
 
+type Tag = {
+  name: string;
+  slug: string;
+};
+
 interface BlogEditorProps {
   params: Promise<{ id: string }>;
 }
@@ -65,6 +79,10 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [isEditingTags, setIsEditingTags] = useState(false);
+  const [tagDialogOpen, setTagDialogOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
 
   const form = useForm<BlogFormData>({
     resolver: zodResolver(blogSchema),
@@ -143,6 +161,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       form.setValue("content", content);
       form.setValue("coverImage", data.coverImage || "");
       setEditorContent(content);
+      setTags(data.tags?.filter((tag): tag is Tag => tag !== null) || []);
     } catch (error) {
       console.error("Error loading blog:", error);
       toast.error("Failed to load blog");
@@ -260,6 +279,78 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     } catch (error) {
       console.error("Failed to update blog state:", error);
       toast.error("Failed to update blog state");
+    }
+  };
+
+  const addTag = () => {
+    const trimmedName = newTagName.trim();
+    if (!trimmedName) return;
+
+    const slug = generateSlug(trimmedName);
+
+    // Check for duplicate
+    if (tags.some((tag) => tag.slug === slug)) {
+      toast.error("Tag already exists");
+      return;
+    }
+
+    const newTag: Tag = {
+      name: trimmedName,
+      slug: slug,
+    };
+
+    setTags((prev) => [...prev, newTag]);
+    setNewTagName("");
+    setTagDialogOpen(false);
+  };
+
+  const removeTag = (slugToRemove: string) => {
+    setTags((prev) => prev.filter((tag) => tag.slug !== slugToRemove));
+  };
+
+  const saveTags = async () => {
+    if (!blogRef.current) return;
+
+    try {
+      setSaving(true);
+
+      // Delete existing tag references using the ref GSI
+      const { data: existingRefs } =
+        await client.models.TagReferences.listTagReferencesByRef({
+          ref: `BLOG#${blogRef.current.id}`,
+        });
+
+      for (const ref of existingRefs || []) {
+        await client.models.TagReferences.delete({ id: ref.id });
+      }
+
+      // Update blog with new tags
+      await client.models.Blogs.update({
+        id: blogRef.current.id,
+        tags: tags,
+      });
+
+      // Create new tag references
+      for (const tag of tags) {
+        await client.models.TagReferences.create({
+          slug: tag.slug,
+          ref: `BLOG#${blogRef.current.id}`,
+        });
+      }
+
+      blogRef.current = { ...blogRef.current, tags };
+      setIsEditingTags(false);
+      toast.success("Tags saved successfully!");
+
+      // Invalidate blogs cache
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.BLOGS(blogRef.current.userId),
+      });
+    } catch (error) {
+      console.error("Failed to save tags:", error);
+      toast.error("Failed to save tags");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -425,6 +516,139 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                     </FormItem>
                   )}
                 />
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Tags</Label>
+                    {!isEditingTags ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditingTags(true)}
+                        className="gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Edit Tags
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setTags(blogRef.current?.tags || []);
+                            setIsEditingTags(false);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={saveTags}
+                          disabled={saving}
+                        >
+                          Save Tags
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded-md">
+                    {tags.map((tag) => (
+                      <Badge
+                        key={tag.slug}
+                        variant="secondary"
+                        className="gap-1"
+                      >
+                        {tag.name}
+                        {isEditingTags && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 hover:bg-transparent hover:text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeTag(tag.slug);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </Badge>
+                    ))}
+
+                    {isEditingTags && (
+                      <Dialog
+                        open={tagDialogOpen}
+                        onOpenChange={setTagDialogOpen}
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-1 h-6"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Add Tag
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Add New Tag</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="tagName">Tag Name</Label>
+                              <Input
+                                id="tagName"
+                                value={newTagName}
+                                onChange={(e) => setNewTagName(e.target.value)}
+                                placeholder="Enter tag name..."
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    addTag();
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  setNewTagName("");
+                                  setTagDialogOpen(false);
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={addTag}
+                                disabled={!newTagName.trim()}
+                              >
+                                Add Tag
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {tags.length === 0 && (
+                      <span className="text-muted-foreground text-sm">
+                        No tags added yet
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

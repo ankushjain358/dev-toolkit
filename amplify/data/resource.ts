@@ -49,7 +49,7 @@ const schema = a
         index("userId"), // GSI on userId to query user's blogs
       ])
       .authorization((allow) => [
-        allow.ownerDefinedIn("userId"),
+        allow.ownerDefinedIn("userId"), // Allow signed-in user to create, read, update, and delete their __OWN__ posts.
         allow.guest().to(["read"]), // Guests can read all blogs, filtering done in app logic
       ]),
 
@@ -64,7 +64,7 @@ const schema = a
         index("ref"), // GSI on ref as partition key
       ])
       .authorization((allow) => [
-        allow.authenticated().to(["create", "delete"]),
+        allow.authenticated().to(["read", "create", "delete"]),
         allow.guest().to(["read"]),
       ]),
   })
