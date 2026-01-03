@@ -55,7 +55,7 @@ TODO
 
 ## Architecture
 
-![System Architecture](./design-docs/architecture.png)
+![System Architecture](./design-docs/architecture-design.png)
 
 ## Code Quality & Hooks ✅
 
