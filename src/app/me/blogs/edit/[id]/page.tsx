@@ -35,7 +35,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { cn, generateUniqueSlug, generateSlug } from "@/lib/utils";
+import { generateUniqueSlug, generateSlug } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/app-constants";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -113,7 +113,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       const fileName = `${prefix}_${nanoid()}.${fileExtension}`;
       const key = `public/blogs/${blogRef.current.id}/${fileName}`;
 
-      const result = await uploadData({
+      await uploadData({
         path: key,
         data: file,
       }).result;
