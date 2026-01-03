@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 /* End: Tailwind section */
 
 import { generateClient } from "aws-amplify/data";
-import { getCurrentUser } from "aws-amplify/auth";
+import { fetchAuthSession } from "aws-amplify/auth";
 import type { Schema } from "@/../amplify/data/resource";
 
 const client = generateClient<Schema>();
@@ -109,19 +109,20 @@ export async function convertToHTML(editor: any) {
   return fixedHtml;
 }
 
-export async function initializeUserGetId(): Promise<string> {
+export async function getUserInfo(): Promise<{
+  identityId: string;
+  userId: string;
+}> {
   try {
-    const user = await getCurrentUser();
-    const email = user.signInDetails?.loginId || user.username;
-    const userList = await client.models.Users.listUsersByEmail({ email });
+    const data = await fetchAuthSession();
 
-    if (userList?.data?.length > 0) {
-      return userList.data[0].id;
-    }
+    if (!data.identityId) throw new Error("No identityId found");
 
-    throw new Error("User not found after authentication");
+    if (!data.userSub) throw new Error("No userSub found");
+
+    return { identityId: data.identityId, userId: data.userSub };
   } catch (error) {
-    console.error("Error initializing user:", error);
+    console.error("Error fetching identity ID:", error);
     throw error;
   }
 }

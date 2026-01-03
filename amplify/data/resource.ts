@@ -16,17 +16,6 @@ import { postConfirmation } from "../auth/post-confirmation/resource";
 
 const schema = a
   .schema({
-    Users: a
-      .model({
-        id: a.id().required(),
-        email: a.string().required(),
-        cognito_subs: a.string().array().required(),
-      })
-      .secondaryIndexes((index) => [
-        index("email"), // GSI on email field
-      ])
-      .authorization((allow) => [allow.ownerDefinedIn("id")]),
-
     Tag: a.customType({
       name: a.string().required(),
       slug: a.string().required(),
@@ -66,6 +55,62 @@ const schema = a
       .authorization((allow) => [
         allow.authenticated().to(["read", "create", "delete"]),
         allow.guest().to(["read"]),
+      ]),
+
+    // SiteSettings: a
+    //   .model({
+    //     // Tenant boundary
+    //     siteId: a.string(),
+
+    //     // Branding
+    //     logoUrl: a.string(),
+    //     faviconUrl: a.string(),
+
+    //     // Home page
+    //     homeBannerTitle: a.string(),
+    //     homeBannerSubtitle: a.string(),
+    //     homeBannerImageUrl: a.string(),
+    //     tagline: a.string(),
+
+    //     // About page
+    //     aboutTitle: a.string(),
+    //     aboutSubtitle: a.string(),
+    //     aboutDescription: a.string(),
+
+    //     // Social links (explicit fields)
+    //     twitterUrl: a.string(),
+    //     linkedinUrl: a.string(),
+    //     instagramUrl: a.string(),
+    //     facebookUrl: a.string(),
+    //     youtubeUrl: a.string(),
+    //     githubUrl: a.string(),
+
+    //     // SEO
+    //     metaTitle: a.string(),
+    //     metaDescription: a.string(),
+    //   })
+    //   .identifier(["siteId"])
+    //   .authorization((allow) => [
+    //     allow.authenticated().to(["read", "create", "update"]),
+    //     allow.guest().to(["read"]),
+    //   ]),
+
+    Profile: a
+      .model({
+        userId: a.string().required(),
+        displayName: a.string(),
+        bio: a.string(),
+        avatarUrl: a.string(),
+        location: a.string(),
+        website: a.string(),
+        twitterUrl: a.string(),
+        linkedinUrl: a.string(),
+        githubUrl: a.string(),
+      })
+      .identifier(["userId"])
+      .authorization((allow) => [
+        allow.ownerDefinedIn("userId"), // Allow signed-in user to create, read, update, and delete their __OWN__ posts.
+        allow.guest().to(["read"]), // Guests can read all blogs, filtering done in app logic
       ]),
   })
   // [Global authorization rule]

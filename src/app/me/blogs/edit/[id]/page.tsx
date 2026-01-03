@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/../amplify/data/resource";
-import { uploadData, getUrl } from "aws-amplify/storage";
+import { uploadData } from "aws-amplify/storage";
 import { Save, Eye, EyeOff } from "lucide-react";
 import TiptapEditor from "@/app/me/components/TiptapEditor";
 import toast from "react-hot-toast";
@@ -35,7 +35,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { cn, generateUniqueSlug, generateSlug } from "@/lib/utils";
+import { generateUniqueSlug, generateSlug } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/app-constants";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -86,7 +86,6 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isEditingTags, setIsEditingTags] = useState(false);
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
@@ -114,7 +113,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       const fileName = `${prefix}_${nanoid()}.${fileExtension}`;
       const key = `public/blogs/${blogRef.current.id}/${fileName}`;
 
-      const result = await uploadData({
+      await uploadData({
         path: key,
         data: file,
       }).result;
@@ -134,18 +133,17 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
   const handleEditorChange = (content: string) => {
     setEditorContent(content);
-    form.setValue("content", content);
-    setHasUnsavedChanges(true);
+    form.setValue("content", content, { shouldDirty: true });
   };
 
   const debouncedSave = useMemo(
     () =>
       debounce(() => {
-        if (blogRef.current && hasUnsavedChanges) {
+        if (blogRef.current && form.formState.isDirty) {
           handleSave(true);
         }
       }, 15000),
-    [hasUnsavedChanges],
+    [form.formState.isDirty],
   );
 
   useEffect(() => {
@@ -153,10 +151,10 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   }, []);
 
   useEffect(() => {
-    if (hasUnsavedChanges) {
+    if (form.formState.isDirty) {
       debouncedSave();
     }
-  }, [hasUnsavedChanges, debouncedSave]);
+  }, [form.formState.isDirty, debouncedSave]);
 
   const initializeBlog = async () => {
     try {
@@ -216,7 +214,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       });
 
       setLastSaved(new Date());
-      setHasUnsavedChanges(false);
+      form.reset(form.getValues()); // Reset dirty state while keeping current values
 
       // Invalidate blogs cache to refresh the list
       queryClient.invalidateQueries({
@@ -244,8 +242,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
     try {
       const url = await uploadImageHandler(file, "cover");
-      form.setValue("coverImage", url);
-      setHasUnsavedChanges(true);
+      form.setValue("coverImage", url, { shouldDirty: true });
       toast.success("Cover image uploaded successfully!", {
         id: "cover-upload",
       });
@@ -258,7 +255,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const handleImageUpload = async (file: File): Promise<string> => {
     const url = await uploadImageHandler(file);
     if (url) {
-      setHasUnsavedChanges(true);
+      // Image uploads in editor content are handled by setValue in handleEditorChange
     }
     return url;
   };
@@ -421,7 +418,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             </BreadcrumbList>
           </Breadcrumb>
           <div className="flex items-center gap-2">
-            {hasUnsavedChanges && (
+            {form.formState.isDirty && (
               <span className="text-sm text-yellow-600 dark:text-yellow-500">
                 Unsaved changes
               </span>
@@ -436,7 +433,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             )}
             <Button
               onClick={() => handleSave(false)}
-              disabled={saving}
+              disabled={saving || !form.formState.isDirty}
               className="gap-2 cursor-pointer"
             >
               <Save className="h-4 w-4" />
@@ -479,7 +476,6 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                           placeholder="Enter blog title..."
                           onChange={(e) => {
                             field.onChange(e);
-                            setHasUnsavedChanges(true);
                           }}
                         />
                       </FormControl>
@@ -519,7 +515,6 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                               size="sm"
                               onClick={() => {
                                 field.onChange("");
-                                setHasUnsavedChanges(true);
                               }}
                             >
                               Remove
