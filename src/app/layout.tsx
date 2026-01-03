@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import "@aws-amplify/ui-react/styles.css";
 import ConfigureAmplifyClientSide from "@/components/ConfigureAmplifyClientSide";
 import QueryProvider from "@/components/QueryProvider";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,12 +18,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dev Toolkit Blog",
-  description: "A modern blog platform built with Next.js and AWS Amplify",
+  title: "Dev Toolkit - Productivity Platform for Developers",
+  description:
+    "A comprehensive productivity platform for developers. Manage your blogs, bookmarks, notes, and projects all in one place.",
   icons: {
-    icon: "/favicon.png", // Path to your favicon in the public directory
-    // You can also add other icons like apple-touch-icon, etc.
-    // apple: '/apple-touch-icon.png',
+    icon: "/favicon.png",
   },
 };
 
@@ -32,24 +32,31 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ConfigureAmplifyClientSide />
-        <QueryProvider>
-          {children}
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              duration: 2000,
-              style: {
-                background: "#363636",
-                color: "#fff",
-              },
-            }}
-          />
-        </QueryProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ConfigureAmplifyClientSide />
+          <QueryProvider>
+            {children}
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                duration: 2000,
+                style: {
+                  background: "#363636",
+                  color: "#fff",
+                },
+              }}
+            />
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  initializeUserGetId,
+  getUserInfo,
   generateUniqueSlug,
   formatDate,
   stripHtml,
@@ -112,15 +112,18 @@ export default function BlogsPage() {
    * Query 1: Initialize user and get userId
    */
   const {
-    data: userId,
+    data: userInfo,
     isLoading: isUserLoading,
     isError: isUserError,
     error: userError,
   } = useQuery({
     queryKey: QUERY_KEYS.CURRENT_USER_ID,
-    queryFn: initializeUserGetId,
+    queryFn: getUserInfo,
     retry: false,
   });
+
+  // Extract userId for easier access
+  const userId = userInfo?.userId;
 
   /**
    * Query 2: Fetch blogs (runs only after userId exists)
@@ -130,7 +133,6 @@ export default function BlogsPage() {
     isLoading: isBlogsLoading,
     isError: isBlogsError,
     error: blogsError,
-    refetch: refetchBlogs,
   } = useQuery({
     queryKey: QUERY_KEYS.BLOGS(userId!),
     queryFn: () => fetchBlogs(userId!),

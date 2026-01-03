@@ -18,25 +18,22 @@ Amplify.configure(resourceConfig, libraryOptions);
 const client = generateClient<Schema>();
 
 export const handler: PostConfirmationTriggerHandler = async (event) => {
-  const email = event.request.userAttributes.email;
   const sub = event.request.userAttributes.sub;
-  const userList = await client.models.Users.listUsersByEmail({ email });
-  const userExists = userList?.data?.length > 0;
+  const email = event.request.userAttributes.email;
 
-  if (userExists) {
-    const existingUser = userList.data[0];
-    if (existingUser.cognito_subs.indexOf(sub) == -1) {
-      existingUser.cognito_subs.push(sub);
-      await client.models.Users.update({
-        id: existingUser.id,
-        cognito_subs: existingUser.cognito_subs,
-      });
-    }
-  } else {
-    await client.models.Users.create({
-      id: event.request.userAttributes.sub,
-      email: event.request.userAttributes.email,
-      cognito_subs: [event.request.userAttributes.sub],
+  // Check if profile already exists
+  const { data: existingProfile } = await client.models.Profile.get({
+    userId: sub,
+  });
+
+  if (!existingProfile) {
+    // Extract display name from email (part before @)
+    const displayName = email.split("@")[0];
+
+    // Create profile entry for new user
+    await client.models.Profile.create({
+      userId: sub,
+      displayName: displayName,
     });
   }
 
