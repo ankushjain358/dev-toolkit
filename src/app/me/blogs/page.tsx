@@ -226,14 +226,21 @@ export default function BlogsPage() {
     if (!confirm(`Are you sure you want to delete "${blog.title}"?`)) return;
 
     try {
-      // Delete associated tag references first
-      const { data: tagRefs } =
-        await client.models.TagReferences.listTagReferencesByRef({
-          ref: `BLOG#${blog.id}`,
-        });
+      // Get blog with its tag relationships
+      const { data: existingBlog } = await client.models.Blogs.get({
+        id: blog.id,
+      });
 
-      for (const ref of tagRefs || []) {
-        await client.models.TagReferences.delete({ id: ref.id });
+      // Delete associated tag references using the relationship
+      if (existingBlog) {
+        const { data: tags } = await existingBlog.tags();
+        if (tags) {
+          await Promise.all(
+            tags.map((blogTag) =>
+              client.models.BlogTag.delete({ id: blogTag.id }),
+            ),
+          );
+        }
       }
 
       // Then delete the blog

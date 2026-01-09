@@ -8,7 +8,7 @@ import { z } from "zod";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/../amplify/data/resource";
 import { uploadData } from "aws-amplify/storage";
-import { Save, Eye, EyeOff } from "lucide-react";
+import { Save, Eye, EyeOff, Tags, X, Plus } from "lucide-react";
 import TiptapEditor from "@/app/me/components/TiptapEditor";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -35,18 +35,23 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { generateUniqueSlug, generateSlug } from "@/lib/utils";
+import { generateUniqueSlug } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/app-constants";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Edit, Plus, X } from "lucide-react";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import outputs from "@/../amplify_outputs.json";
 
 const client = generateClient<Schema>();
@@ -60,19 +65,17 @@ const blogSchema = z.object({
   coverImage: z.string().optional(),
 });
 
-const tagSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Tag name is required")
-    .max(50, "Tag name must be less than 50 characters"),
-});
-
-type TagFormData = z.infer<typeof tagSchema>;
 type BlogFormData = z.infer<typeof blogSchema>;
 
-type Tag = {
+type BlogTag = {
+  id: string;
   name: string;
   slug: string;
+};
+
+type SelectedTag = {
+  id: string;
+  name: string;
 };
 
 interface BlogEditorProps {
@@ -86,16 +89,10 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [isEditingTags, setIsEditingTags] = useState(false);
-  const [tagDialogOpen, setTagDialogOpen] = useState(false);
-
-  const tagForm = useForm<TagFormData>({
-    resolver: zodResolver(tagSchema),
-    defaultValues: {
-      name: "",
-    },
-  });
+  const [selectedTags, setSelectedTags] = useState<SelectedTag[]>([]);
+  const [originalTags, setOriginalTags] = useState<SelectedTag[]>([]);
+  const [tagComboOpen, setTagComboOpen] = useState(false);
+  const [savingTags, setSavingTags] = useState(false);
 
   const form = useForm<BlogFormData>({
     resolver: zodResolver(blogSchema),
@@ -146,6 +143,14 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     [form.formState.isDirty],
   );
 
+  const { data: availableTags = [] } = useQuery({
+    queryKey: QUERY_KEYS.TAGS,
+    queryFn: async () => {
+      const { data } = await client.models.Tag.list();
+      return data || [];
+    },
+  });
+
   useEffect(() => {
     initializeBlog();
   }, []);
@@ -173,7 +178,28 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       form.setValue("content", content);
       form.setValue("coverImage", data.coverImage || "");
       setEditorContent(content);
-      setTags(data.tags?.filter((tag): tag is Tag => tag !== null) || []);
+
+      // Load tags using lazy loading from blog's hasMany relationship
+      try {
+        const blogTagsResult = await data.tags();
+        const blogTags = blogTagsResult.data || [];
+        const validTags: SelectedTag[] = [];
+
+        for (const blogTag of blogTags) {
+          // const tag = availableTags.find(item => item.id == blogTag.tagId)
+          // if (tag) {
+          //   validTags.push({ id: tag.id, name: tag.name });
+          // }
+          const tag = await blogTag.tag();
+          if (tag.data) {
+            validTags.push({ id: tag.data.id, name: tag.data.name });
+          }
+        }
+        setSelectedTags(validTags);
+        setOriginalTags(validTags);
+      } catch (tagError) {
+        console.error("Error loading tags:", tagError);
+      }
     } catch (error) {
       console.error("Error loading blog:", error);
       toast.error("Failed to load blog");
@@ -186,7 +212,6 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const handleSave = async (isAutoSave = false) => {
     if (!blogRef.current || saving) return;
 
-    // Validate form before saving
     const isValid = await form.trigger();
     if (!isValid) {
       if (!isAutoSave) {
@@ -214,9 +239,8 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       });
 
       setLastSaved(new Date());
-      form.reset(form.getValues()); // Reset dirty state while keeping current values
+      form.reset(form.getValues());
 
-      // Invalidate blogs cache to refresh the list
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.BLOGS(blogRef.current.userId),
       });
@@ -254,16 +278,12 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
   const handleImageUpload = async (file: File): Promise<string> => {
     const url = await uploadImageHandler(file);
-    if (url) {
-      // Image uploads in editor content are handled by setValue in handleEditorChange
-    }
     return url;
   };
 
   const togglePublishState = async () => {
     if (!blogRef.current) return;
 
-    // Validate form before publishing
     const isValid = await form.trigger();
     if (!isValid) {
       toast.error("Please fix validation errors before publishing");
@@ -281,7 +301,6 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
       blogRef.current = { ...blogRef.current, state: newState };
 
-      // Invalidate blogs cache to refresh the list
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.BLOGS(blogRef.current.userId),
       });
@@ -293,77 +312,81 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     }
   };
 
-  const addTag = async (data: TagFormData) => {
-    const trimmedName = data.name.trim();
-    const slug = generateSlug(trimmedName);
-
-    // Check for duplicate
-    if (tags.some((tag) => tag.slug === slug)) {
-      tagForm.setError("name", { message: "Tag already exists" });
-      return;
-    }
-
-    const newTag: Tag = {
-      name: trimmedName,
-      slug: slug,
-    };
-
-    setTags((prev) => [...prev, newTag]);
-    tagForm.reset();
-    setTagDialogOpen(false);
-  };
-
-  const removeTag = (slugToRemove: string) => {
-    setTags((prev) => prev.filter((tag) => tag.slug !== slugToRemove));
-  };
-
-  // This could be improved later using batch operations
-  // https://docs.amplify.aws/react/build-a-backend/data/custom-business-logic/batch-ddb-operations/
-  const saveTags = async () => {
+  const handleSaveTags = async () => {
     if (!blogRef.current) return;
 
+    setSavingTags(true);
     try {
-      setSaving(true);
-
-      // Delete existing tag references using the ref GSI
-      const { data: existingRefs } =
-        await client.models.TagReferences.listTagReferencesByRef({
-          ref: `BLOG#${blogRef.current.id}`,
-        });
-
-      for (const ref of existingRefs || []) {
-        await client.models.TagReferences.delete({ id: ref.id });
+      // Delete existing tags using lazy loading
+      const existingBlogTagsResult = await blogRef.current.tags();
+      const existingBlogTags = existingBlogTagsResult.data || [];
+      if (existingBlogTags.length > 0) {
+        await Promise.all(
+          existingBlogTags.map((bt: any) =>
+            client.models.BlogTag.delete({ id: bt.id }),
+          ),
+        );
       }
 
-      // Update blog with new tags
-      await client.models.Blogs.update({
-        id: blogRef.current.id,
-        tags: tags,
-      });
+      // Validate selected tags still exist
+      const validTagIds: string[] = [];
+      const invalidTags: string[] = [];
 
-      // Create new tag references
-      for (const tag of tags) {
-        await client.models.TagReferences.create({
-          slug: tag.slug,
-          ref: `BLOG#${blogRef.current.id}`,
-        });
+      for (const selectedTag of selectedTags) {
+        const tagExists = availableTags.find((t) => t.id === selectedTag.id);
+        if (tagExists) {
+          validTagIds.push(selectedTag.id);
+        } else {
+          invalidTags.push(selectedTag.name);
+        }
       }
 
-      blogRef.current = { ...blogRef.current, tags };
-      setIsEditingTags(false);
+      // Show warning for deleted tags
+      if (invalidTags.length > 0) {
+        toast.error(`Some tags were deleted: ${invalidTags.join(", ")}`);
+      }
+
+      await Promise.all(
+        validTagIds.map((tagId) =>
+          client.models.BlogTag.create({
+            blogId: blogRef.current.id,
+            tagId,
+          }),
+        ),
+      );
+
+      const validSelectedTags = selectedTags.filter((st) =>
+        validTagIds.includes(st.id),
+      );
+      setSelectedTags(validSelectedTags);
+      setOriginalTags(validSelectedTags);
+
       toast.success("Tags saved successfully!");
-
-      // Invalidate blogs cache
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.BLOGS(blogRef.current.userId),
-      });
     } catch (error) {
-      console.error("Failed to save tags:", error);
+      console.error("Error saving tags:", error);
       toast.error("Failed to save tags");
     } finally {
-      setSaving(false);
+      setSavingTags(false);
     }
   };
+
+  const addTag = (tag: BlogTag) => {
+    if (selectedTags.length >= 5) {
+      toast.error("Maximum 5 tags allowed");
+      return;
+    }
+    if (!selectedTags.find((t) => t.id === tag.id)) {
+      setSelectedTags((prev) => [...prev, { id: tag.id, name: tag.name }]);
+    }
+    setTagComboOpen(false);
+  };
+
+  const removeTag = (tagId: string) => {
+    setSelectedTags((prev) => prev.filter((t) => t.id !== tagId));
+  };
+
+  const tagsChanged =
+    JSON.stringify(selectedTags) !== JSON.stringify(originalTags);
 
   if (loading) {
     return (
@@ -471,13 +494,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                     <FormItem>
                       <FormLabel>Blog Title</FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter blog title..."
-                          onChange={(e) => {
-                            field.onChange(e);
-                          }}
-                        />
+                        <Input {...field} placeholder="Enter blog title..." />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -513,9 +530,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                field.onChange("");
-                              }}
+                              onClick={() => field.onChange("")}
                             >
                               Remove
                             </Button>
@@ -529,133 +544,93 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Tags</Label>
-                    {!isEditingTags ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsEditingTags(true)}
-                        className="gap-2 cursor-pointer"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Edit Tags
-                      </Button>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setTags(blogRef.current?.tags || []);
-                            setIsEditingTags(false);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={saveTags}
-                          disabled={saving}
-                          className="cursor-pointer"
-                        >
-                          Save Tags
-                        </Button>
-                      </div>
-                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleSaveTags}
+                      disabled={savingTags || !tagsChanged}
+                      className="cursor-pointer"
+                    >
+                      <Tags className="h-4 w-4 mr-2" />
+                      Save Tags
+                    </Button>
                   </div>
 
                   <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded-md">
-                    {tags.map((tag) => (
-                      <Badge
-                        key={tag.slug}
-                        variant="secondary"
-                        className="gap-1"
-                      >
+                    {selectedTags.map((tag) => (
+                      <Badge key={tag.id} variant="secondary" className="gap-1">
                         {tag.name}
-                        {isEditingTags && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-4 w-4 p-0 hover:bg-transparent hover:text-destructive"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              removeTag(tag.slug);
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-transparent hover:text-destructive"
+                          onClick={() => removeTag(tag.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </Badge>
                     ))}
 
-                    {isEditingTags && (
-                      <Dialog
-                        open={tagDialogOpen}
-                        onOpenChange={setTagDialogOpen}
-                      >
-                        <DialogTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="gap-1 h-6 cursor-pointer"
-                          >
-                            <Plus className="h-3 w-3" />
-                            <small>Add Tag</small>
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Add New Tag</DialogTitle>
-                          </DialogHeader>
-                          <Form {...tagForm}>
-                            <form
-                              onSubmit={tagForm.handleSubmit(addTag)}
-                              className="space-y-4"
-                            >
-                              <FormField
-                                control={tagForm.control}
-                                name="name"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Tag Name</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        {...field}
-                                        placeholder="Enter tag name..."
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => {
-                                    tagForm.reset();
-                                    setTagDialogOpen(false);
-                                  }}
+                    <Popover open={tagComboOpen} onOpenChange={setTagComboOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 h-6 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                          disabled={selectedTags.length >= 5}
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add Tag
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search tags..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              <div className="p-2 text-sm text-muted-foreground">
+                                No tags found.{" "}
+                                <Link
+                                  href="/me/settings/tags"
+                                  className="text-primary underline"
                                 >
-                                  Cancel
-                                </Button>
-                                <Button type="submit">Add Tag</Button>
+                                  Create tags
+                                </Link>{" "}
+                                in settings.
                               </div>
-                            </form>
-                          </Form>
-                        </DialogContent>
-                      </Dialog>
-                    )}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {availableTags
+                                .filter(
+                                  (tag) =>
+                                    !selectedTags.find(
+                                      (st) => st.id === tag.id,
+                                    ),
+                                )
+                                .map((tag) => (
+                                  <CommandItem
+                                    key={tag.id}
+                                    onSelect={() => addTag(tag)}
+                                  >
+                                    {tag.name}
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
 
-                    {tags.length === 0 && (
+                    {selectedTags.length === 0 && (
                       <span className="text-muted-foreground text-sm">
                         No tags added yet
+                      </span>
+                    )}
+                    {selectedTags.length >= 5 && (
+                      <span className="text-muted-foreground text-xs">
+                        Maximum 5 tags allowed
                       </span>
                     )}
                   </div>
@@ -664,15 +639,11 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             </CardContent>
           </Card>
 
-          {/* <Card>
-            <CardContent className="p-0"> */}
           <TiptapEditor
             content={editorContent}
             onChange={handleEditorChange}
             onImageUpload={handleImageUpload}
           />
-          {/* </CardContent>
-          </Card> */}
         </div>
       </Form>
     </>
