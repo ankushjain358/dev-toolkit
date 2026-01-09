@@ -1,11 +1,6 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import { notFound } from "next/navigation";
 import { Calendar, User, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { Amplify } from "aws-amplify";
-import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/../amplify/data/resource";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,97 +8,52 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ExternalLayout } from "@/components/layout/external-layout";
 import { formatDate } from "@/lib/utils";
 import outputs from "@/../amplify_outputs.json";
+import { getBlogBySlug, getTagsForBlog } from "@/lib/server-client";
 
-// Configure Amplify for client-side rendering
-Amplify.configure(outputs);
-const client = generateClient<Schema>();
-
-type Blog = Schema["Blogs"]["type"];
 type Profile = Schema["Profile"]["type"];
+
+const getAvatarUrl = (avatarUrl: string | null | undefined) => {
+  if (!avatarUrl) return undefined;
+  return `https://${outputs.custom.distributionDomainName}/${avatarUrl}`;
+};
 
 interface BlogDetailProps {
   params: Promise<{ slug: string }>;
 }
 
-export default function BlogDetailPage({ params }: BlogDetailProps) {
-  const [blog, setBlog] = useState<Blog | null>(null);
-  const [author, setAuthor] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [slug, setSlug] = useState<string>("");
-
-  useEffect(() => {
-    const getParams = async () => {
-      const resolvedParams = await params;
-      setSlug(resolvedParams.slug);
-    };
-    getParams();
-  }, [params]);
-
-  useEffect(() => {
-    if (!slug) return;
-
-    const fetchBlog = async () => {
-      try {
-        const { data } = await client.models.Blogs.listBlogsBySlug({ slug });
-
-        if (!data || data.length === 0) {
-          notFound();
-          return;
-        }
-
-        const blogData = data[0];
-
-        // Only show published blogs on external pages
-        if (blogData.state !== "PUBLISHED") {
-          notFound();
-          return;
-        }
-
-        setBlog(blogData);
-
-        // Fetch author profile
-        try {
-          const { data: profileData } = await client.models.Profile.get({
-            userId: blogData.userId,
-          });
-          setAuthor(profileData);
-        } catch (error) {
-          console.error("Error fetching author profile:", error);
-        }
-      } catch (error) {
-        console.error("Error fetching blog:", error);
-        notFound();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBlog();
-  }, [slug]);
-
-  const getAvatarUrl = (avatarUrl: string | null | undefined) => {
-    if (!avatarUrl) return undefined;
-    return `https://${outputs.custom.distributionDomainName}/${avatarUrl}`;
-  };
-
-  if (loading) {
-    return (
-      <ExternalLayout>
-        <div className="container max-w-4xl mx-auto py-16 px-4">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-24 mb-8"></div>
-            <div className="h-12 bg-muted rounded w-3/4 mb-6"></div>
-            <div className="h-4 bg-muted rounded w-1/2 mb-8"></div>
-            <div className="h-64 bg-muted rounded mb-8"></div>
-          </div>
-        </div>
-      </ExternalLayout>
-    );
-  }
+async function getBlogWithAuthor(slug: string) {
+  const blog = await getBlogBySlug(slug);
 
   if (!blog) {
     notFound();
   }
+
+  // Fetch author profile
+  let author: Profile | null = null;
+  try {
+    const { serverClient } = await import("@/lib/server-client");
+    const { data: profileData } = await serverClient.models.Profile.get({
+      userId: blog.userId,
+    });
+    author = profileData;
+  } catch (error) {
+    console.error("Error fetching author profile:", error);
+  }
+
+  // Fetch tags for this blog
+  let tags: Array<{ id: string; name?: string }> = [];
+  try {
+    tags = await getTagsForBlog(blog.id);
+  } catch (error) {
+    console.error("Error fetching tags for blog:", error);
+  }
+
+  return { blog, author, tags };
+}
+
+export default async function BlogDetailPage({ params }: BlogDetailProps) {
+  const { slug } = await params;
+  const { blog, author, tags } = await getBlogWithAuthor(slug);
 
   return (
     <ExternalLayout>
@@ -147,10 +97,10 @@ export default function BlogDetailPage({ params }: BlogDetailProps) {
           </div>
 
           {/* Tags */}
-          {blog.tags && blog.tags.length > 0 && (
+          {tags && tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-8">
-              {blog.tags.map((tag, index) => (
-                <Badge key={index} variant="secondary">
+              {tags.map((tag) => (
+                <Badge key={tag.id} variant="secondary">
                   {tag?.name}
                 </Badge>
               ))}

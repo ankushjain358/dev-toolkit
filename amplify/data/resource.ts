@@ -3,7 +3,7 @@ import { postConfirmation } from "../auth/post-confirmation/resource";
 
 const schema = a
   .schema({
-    Blogs: a
+    Blog: a
       .model({
         id: a.id().required(), // This will be the BLOGID
         userId: a.string().required(),
@@ -22,7 +22,7 @@ const schema = a
       ])
       .authorization((allow) => [
         allow.ownerDefinedIn("userId"), // Allow signed-in user to create, read, update, and delete their __OWN__ posts.
-        allow.guest().to(["read"]), // Guests can read all blogs, filtering done in app logic
+        allow.publicApiKey().to(["read"]), // Public API key can read all blogs, filtering done in app logic
       ]),
 
     Tag: a
@@ -35,7 +35,7 @@ const schema = a
       })
       .authorization((allow) => [
         allow.authenticated().to(["read", "create", "delete"]),
-        allow.guest().to(["read"]),
+        allow.publicApiKey().to(["read"]),
       ]),
     BlogTag: a
       .model({
@@ -44,12 +44,12 @@ const schema = a
         tagId: a.id().required(),
         // 2. Create relationship fields to both ends of the many-to-many relationship using their
         // respective reference fields
-        blog: a.belongsTo("Blogs", "blogId"),
+        blog: a.belongsTo("Blog", "blogId"),
         tag: a.belongsTo("Tag", "tagId"),
       })
       .authorization((allow) => [
         allow.authenticated().to(["read", "create", "delete"]),
-        allow.guest().to(["read"]),
+        allow.publicApiKey().to(["read"]),
       ]),
 
     // SiteSettings: a
@@ -105,7 +105,7 @@ const schema = a
       .identifier(["userId"])
       .authorization((allow) => [
         allow.ownerDefinedIn("userId"), // Allow signed-in user to create, read, update, and delete their __OWN__ posts.
-        allow.guest().to(["read"]), // Guests can read all blogs, filtering done in app logic
+        allow.publicApiKey().to(["read"]),
       ]),
   })
   // [Global authorization rule]

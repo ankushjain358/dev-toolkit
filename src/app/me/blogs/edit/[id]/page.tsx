@@ -164,7 +164,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const initializeBlog = async () => {
     try {
       const { id } = await params;
-      const { data } = await client.models.Blogs.get({ id });
+      const { data } = await client.models.Blog.get({ id });
 
       if (!data) {
         toast.error("Blog not found");
@@ -229,7 +229,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         blogRef.current.id,
       );
 
-      await client.models.Blogs.update({
+      await client.models.Blog.update({
         id: blogRef.current.id,
         title: formData.title,
         slug: slug,
@@ -294,7 +294,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       const newState =
         blogRef.current.state === "PUBLISHED" ? "UNPUBLISHED" : "PUBLISHED";
 
-      await client.models.Blogs.update({
+      await client.models.Blog.update({
         id: blogRef.current.id,
         state: newState,
       });

@@ -57,7 +57,7 @@ export async function slugExists(
   slug: string,
 ): Promise<[boolean, string | null]> {
   try {
-    const { data } = await client.models.Blogs.listBlogsBySlug({
+    const { data } = await client.models.Blog.listBlogBySlug({
       slug,
     });
 

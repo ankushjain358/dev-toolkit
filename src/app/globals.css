@@ -2,6 +2,9 @@
    IMPORTS
    ======================================== */
 @import "tailwindcss";
+/* Syntax themes for highlight.js — light and dark variants. Replace with your preferred theme if needed. */
+@import "highlight.js/styles/github.css";
+@import "highlight.js/styles/github-dark.css";
 
 /* ========================================
    TIPTAP RICH TEXT EDITOR STYLES
@@ -115,8 +118,25 @@
   margin: 0.25rem 0;
 }
 
+/* Paragraphs inside list items have extra top margin by default to create spacing between blocks.
+   When markdown's tight list mode is used, the `tight` class is applied to the <ul> (via
+   the Markdown extension's `tightListClass` option). The CSS below removes that extra
+   spacing so list items appear compact and inline with typical 'tight' markdown rendering. */
 .tiptap li > p {
   margin-top: 1rem;
+}
+
+/* Tight lists: remove paragraph margins inside list items */
+.tiptap ul.tight li > p,
+.tiptap ol.tight li > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Optionally reduce spacing between items in tight lists */
+.tiptap ul.tight li,
+.tiptap ol.tight li {
+  margin: 0.15rem 0;
 }
 
 .tiptap li + li {
@@ -170,6 +190,25 @@
   word-wrap: normal;
   color: inherit;
   font-size: inherit;
+}
+
+/* Syntax highlighting for lowlight/highlight.js output */
+.tiptap pre code.hljs,
+.tiptap pre code[class*="language-"] {
+  display: block;
+  padding: 0; /* container `.tiptap pre` provides padding */
+  background: transparent;
+}
+
+/* Let the imported highlight.js theme control token colors. */
+.tiptap .hljs,
+.dark .tiptap .hljs {
+  color: inherit;
+}
+
+/* maintain rounded corners for selected nodes */
+.tiptap pre.ProseMirror-selectednode {
+  outline: 3px solid #0969da;
 }
 
 /* Images */
