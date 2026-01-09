@@ -1,27 +1,9 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { postConfirmation } from "../auth/post-confirmation/resource";
 
-// *** How allow.ownerDefinedIn works? ***
-// You cannot create items for other users - Amplify enforces that the owner field value must match the current authenticated user's Cognito sub.
-// This authorization enforcement happens at the VTL (Velocity Template Language) level in AppSync.
-//
-// ## Check if userId matches current user's cognito sub
-// #if( $ctx.identity.sub != $ctx.args.input.userId )
-//   $util.unauthorized()
-// #end
-//
-// With allow.owner("userId"):
-// User can only create blogs where userId = their Cognito sub
-// User can only read/update/delete blogs where userId = their Cognito sub
-
 const schema = a
   .schema({
-    Tag: a.customType({
-      name: a.string().required(),
-      slug: a.string().required(),
-    }),
-
-    Blogs: a
+    Blog: a
       .model({
         id: a.id().required(), // This will be the BLOGID
         userId: a.string().required(),
@@ -31,7 +13,8 @@ const schema = a
         contentJson: a.string(), // JSON content from Tiptap
         contentHtml: a.string(), // HTML content from Tiptap
         coverImage: a.string(), // S3 key for cover image
-        tags: a.ref("Tag").array(), // Tags attached to this blog
+        // Add relationship field to the join model with the reference of `blogId`
+        tags: a.hasMany("BlogTag", "blogId"),
       })
       .secondaryIndexes((index) => [
         index("slug"), // GSI on slug field for fast lookups
@@ -39,22 +22,34 @@ const schema = a
       ])
       .authorization((allow) => [
         allow.ownerDefinedIn("userId"), // Allow signed-in user to create, read, update, and delete their __OWN__ posts.
-        allow.guest().to(["read"]), // Guests can read all blogs, filtering done in app logic
+        allow.publicApiKey().to(["read"]), // Public API key can read all blogs, filtering done in app logic
       ]),
 
-    TagReferences: a
+    Tag: a
       .model({
         id: a.id().required(),
-        slug: a.string().required(), // Partition key
-        ref: a.string().required(), // Sort key pattern: Blog#<blogId>
+        name: a.string().required(),
+        slug: a.string().required(),
+        // Add relationship field to the join model with the reference of `tagId`
+        blogs: a.hasMany("BlogTag", "tagId"),
       })
-      .secondaryIndexes((index) => [
-        index("slug").sortKeys(["ref"]), // GSI on slug with ref as sort key
-        index("ref"), // GSI on ref as partition key
-      ])
       .authorization((allow) => [
         allow.authenticated().to(["read", "create", "delete"]),
-        allow.guest().to(["read"]),
+        allow.publicApiKey().to(["read"]),
+      ]),
+    BlogTag: a
+      .model({
+        // 1. Create reference fields to both ends of the many-to-many relationship
+        blogId: a.id().required(),
+        tagId: a.id().required(),
+        // 2. Create relationship fields to both ends of the many-to-many relationship using their
+        // respective reference fields
+        blog: a.belongsTo("Blog", "blogId"),
+        tag: a.belongsTo("Tag", "tagId"),
+      })
+      .authorization((allow) => [
+        allow.authenticated().to(["read", "create", "delete"]),
+        allow.publicApiKey().to(["read"]),
       ]),
 
     // SiteSettings: a
@@ -110,7 +105,7 @@ const schema = a
       .identifier(["userId"])
       .authorization((allow) => [
         allow.ownerDefinedIn("userId"), // Allow signed-in user to create, read, update, and delete their __OWN__ posts.
-        allow.guest().to(["read"]), // Guests can read all blogs, filtering done in app logic
+        allow.publicApiKey().to(["read"]),
       ]),
   })
   // [Global authorization rule]
@@ -127,3 +122,20 @@ export const data = defineData({
     },
   },
 });
+
+// References
+// 1. Model a "many-to-many" relationship
+// https://docs.amplify.aws/react/build-a-backend/data/data-modeling/relationships/#model-a-many-to-many-relationship
+//
+// 2. How allow.ownerDefinedIn works?
+// You cannot create items for other users - Amplify enforces that the owner field value must match the current authenticated user's Cognito sub.
+// This authorization enforcement happens at the VTL (Velocity Template Language) level in AppSync.
+//
+// ## Check if userId matches current user's cognito sub
+// #if( $ctx.identity.sub != $ctx.args.input.userId )
+//   $util.unauthorized()
+// #end
+//
+// With allow.owner("userId"):
+// User can only create blogs where userId = their Cognito sub
+// User can only read/update/delete blogs where userId = their Cognito sub

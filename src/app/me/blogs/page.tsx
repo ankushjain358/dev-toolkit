@@ -67,7 +67,7 @@ import { QUERY_KEYS } from "@/lib/app-constants";
 
 const client = generateClient<Schema>();
 
-type Blog = Schema["Blogs"]["type"];
+type Blog = Schema["Blog"]["type"];
 
 const blogSchema = z.object({
   title: z
@@ -85,7 +85,7 @@ async function fetchBlogs(userId: string): Promise<Blog[]> {
 
   do {
     const { data, nextToken: token } =
-      await client.models.Blogs.listBlogsByUserId(
+      await client.models.Blog.listBlogByUserId(
         { userId },
         nextToken ? { nextToken } : undefined,
       );
@@ -182,7 +182,7 @@ export default function BlogsPage() {
 
       const slug = await generateUniqueSlug(data.title.trim());
 
-      const { data: newBlog } = await client.models.Blogs.create({
+      const { data: newBlog } = await client.models.Blog.create({
         userId: userId,
         title: data.title.trim(),
         slug,
@@ -207,7 +207,7 @@ export default function BlogsPage() {
     try {
       const newState = blog.state === "PUBLISHED" ? "UNPUBLISHED" : "PUBLISHED";
 
-      const { data: updatedBlog } = await client.models.Blogs.update({
+      const { data: updatedBlog } = await client.models.Blog.update({
         id: blog.id,
         state: newState,
       });
@@ -226,18 +226,25 @@ export default function BlogsPage() {
     if (!confirm(`Are you sure you want to delete "${blog.title}"?`)) return;
 
     try {
-      // Delete associated tag references first
-      const { data: tagRefs } =
-        await client.models.TagReferences.listTagReferencesByRef({
-          ref: `BLOG#${blog.id}`,
-        });
+      // Get blog with its tag relationships
+      const { data: existingBlog } = await client.models.Blog.get({
+        id: blog.id,
+      });
 
-      for (const ref of tagRefs || []) {
-        await client.models.TagReferences.delete({ id: ref.id });
+      // Delete associated tag references using the relationship
+      if (existingBlog) {
+        const { data: tags } = await existingBlog.tags();
+        if (tags) {
+          await Promise.all(
+            tags.map((blogTag) =>
+              client.models.BlogTag.delete({ id: blogTag.id }),
+            ),
+          );
+        }
       }
 
       // Then delete the blog
-      await client.models.Blogs.delete({ id: blog.id });
+      await client.models.Blog.delete({ id: blog.id });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BLOGS(userId!) });
       toast.success("Blog deleted successfully!");
     } catch (error) {

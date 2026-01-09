@@ -19,6 +19,12 @@ import {
   ImageIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { Markdown } from "tiptap-markdown";
+import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
+import { all, createLowlight } from "lowlight";
+
+// create a lowlight instance with all languages loaded
+const _lowlight = createLowlight(all);
 
 interface TiptapEditorProps {
   content: string;
@@ -82,6 +88,19 @@ export default function TiptapEditor({
         HTMLAttributes: {
           class: "max-w-full h-auto rounded-lg",
         },
+      }),
+      CodeBlockLowlight.configure({
+        lowlight: _lowlight,
+      }),
+      Markdown.configure({
+        html: true, // Allow HTML input/output
+        tightLists: true, // No <p> inside <li> in markdown output
+        tightListClass: "tight", // Add class to <ul> allowing you to remove <p> margins when tight
+        bulletListMarker: "-", // <li> prefix in markdown output
+        linkify: false, // Create links from "https://..." text
+        breaks: false, // New lines (\n) in markdown input are converted to <br>
+        transformPastedText: true, // Allow to paste markdown text in the editor
+        transformCopiedText: true, // Copied text is transformed to markdown
       }),
     ],
     content,
@@ -241,7 +260,7 @@ export default function TiptapEditor({
             <ImageIcon className="h-4 w-4" />
           </Button>
         )}
-        <div className="w-px h-6 bg-border mx-1" />
+
         <Button
           type="button"
           variant="ghost"

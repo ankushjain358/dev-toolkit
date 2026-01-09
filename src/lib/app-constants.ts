@@ -20,4 +20,7 @@ export const QUERY_KEYS = {
   // Blog queries
   BLOGS: (userId: string) => ["blogs", userId] as const,
   BLOG_BY_ID: (blogId: string) => ["blog", blogId] as const,
+
+  // Tag queries
+  TAGS: ["tags"] as const,
 } as const;
