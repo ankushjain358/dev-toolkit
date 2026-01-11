@@ -3,27 +3,27 @@ import { postConfirmation } from "../auth/post-confirmation/resource";
 
 const schema = a
   .schema({
-    // Blog: a
-    //   .model({
-    //     id: a.id().required(), // This will be the BLOGID
-    //     userId: a.string().required(),
-    //     title: a.string().required(),
-    //     slug: a.string().required(),
-    //     state: a.enum(["UNPUBLISHED", "PUBLISHED"]),
-    //     contentJson: a.string(), // JSON content from Tiptap
-    //     contentHtml: a.string(), // HTML content from Tiptap
-    //     coverImage: a.string(), // S3 key for cover image
-    //     // Add relationship field to the join model with the reference of `blogId`
-    //     tags: a.hasMany("BlogTag", "blogId"),
-    //   })
-    //   .secondaryIndexes((index) => [
-    //     index("slug"), // GSI on slug field for fast lookups
-    //     index("userId"), // GSI on userId to query user's blogs
-    //   ])
-    //   .authorization((allow) => [
-    //     allow.ownerDefinedIn("userId"), // Allow signed-in user to create, read, update, and delete their __OWN__ posts.
-    //     allow.publicApiKey().to(["read"]), // Public API key can read all blogs, filtering done in app logic
-    //   ]),
+    Blog: a
+      .model({
+        id: a.id().required(), // This will be the BLOGID
+        userId: a.string().required(),
+        title: a.string().required(),
+        slug: a.string().required(),
+        state: a.enum(["UNPUBLISHED", "PUBLISHED"]),
+        contentJson: a.string(), // JSON content from Tiptap
+        contentHtml: a.string(), // HTML content from Tiptap
+        coverImage: a.string(), // S3 key for cover image
+        // Add relationship field to the join model with the reference of `blogId`
+        tags: a.hasMany("BlogTag", "blogId"),
+      })
+      .secondaryIndexes((index) => [
+        index("slug"), // GSI on slug field for fast lookups
+        index("userId"), // GSI on userId to query user's blogs
+      ])
+      .authorization((allow) => [
+        allow.ownerDefinedIn("userId"), // Allow signed-in user to create, read, update, and delete their __OWN__ posts.
+        allow.publicApiKey().to(["read"]), // Public API key can read all blogs, filtering done in app logic
+      ]),
 
     Tag: a
       .model({
@@ -44,7 +44,7 @@ const schema = a
         tagId: a.id().required(),
         // 2. Create relationship fields to both ends of the many-to-many relationship using their
         // respective reference fields
-        // blog: a.belongsTo("Blog", "blogId"),
+        blog: a.belongsTo("Blog", "blogId"),
         tag: a.belongsTo("Tag", "tagId"),
       })
       .authorization((allow) => [
