@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - main
-      - stage
-      - prod
+      - dev
 
 # Permission can be added at job level or workflow level
 permissions:
@@ -19,8 +18,8 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Environment mapping: main -> dev, stage -> stage, prod -> prod
-    environment: ${{ github.ref_name == 'main' && 'dev' || github.ref_name }}
+    # Environment mapping: main -> prod, dev -> dev
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'dev' && 'dev' }}
 
     steps:
       - name: Checkout code

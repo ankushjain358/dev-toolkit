@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ExternalLayout } from "@/components/layout/external-layout";
 import { formatDate } from "@/lib/utils";
+import { highlightHtmlCodeBlocks } from "@/lib/highlight-html";
 import outputs from "@/../amplify_outputs.json";
 import { getBlogBySlug, getTagsForBlog } from "@/lib/server-client";
 
@@ -54,6 +55,11 @@ async function getBlogWithAuthor(slug: string) {
 export default async function BlogDetailPage({ params }: BlogDetailProps) {
   const { slug } = await params;
   const { blog, author, tags } = await getBlogWithAuthor(slug);
+
+  // Apply lowlight highlighting to code blocks server-side
+  const highlightedContent = blog.contentHtml
+    ? await highlightHtmlCodeBlocks(blog.contentHtml)
+    : null;
 
   return (
     <ExternalLayout>
@@ -111,7 +117,7 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
           {blog.coverImage && (
             <div className="mb-8">
               <img
-                src={`https://${outputs.custom.distributionDomainName}/${blog.coverImage}`}
+                src={blog.coverImage}
                 alt={blog.title}
                 className="w-full h-64 md:h-96 object-cover rounded-lg"
               />
@@ -121,8 +127,8 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
 
         {/* Article Content */}
         <div className="tiptap prose prose-lg dark:prose-invert max-w-none">
-          {blog.contentHtml ? (
-            <div dangerouslySetInnerHTML={{ __html: blog.contentHtml }} />
+          {highlightedContent ? (
+            <div dangerouslySetInnerHTML={{ __html: highlightedContent }} />
           ) : (
             <p className="text-muted-foreground">No content available.</p>
           )}

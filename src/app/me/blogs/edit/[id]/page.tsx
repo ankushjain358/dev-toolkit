@@ -63,6 +63,7 @@ const blogSchema = z.object({
     .max(200, "Title must be less than 200 characters"),
   content: z.string().min(1, "Content is required"),
   coverImage: z.string().optional(),
+  excerpt: z.string().optional(),
 });
 
 type BlogFormData = z.infer<typeof blogSchema>;
@@ -174,7 +175,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
       blogRef.current = data;
       form.setValue("title", data.title || "");
-      const content = data.contentHtml || "<p>Start typing here...</p>";
+      const content = data.contentHtml || "<p></p>";
       form.setValue("content", content);
       form.setValue("coverImage", data.coverImage || "");
       setEditorContent(content);
@@ -229,13 +230,22 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         blogRef.current.id,
       );
 
+      // Generate excerpt from content (first 50 chars + "...")
+      const plainText = formData.content
+        .replace(/<[^>]*>/g, "") // Remove HTML tags
+        .replace(/&nbsp;/g, " ")
+        .trim();
+      const excerpt =
+        plainText.length > 50 ? plainText.substring(0, 50) + "..." : plainText;
+
       await client.models.Blog.update({
         id: blogRef.current.id,
         title: formData.title,
         slug: slug,
         contentHtml: formData.content,
         contentJson: formData.content,
-        coverImage: formData.coverImage || undefined,
+        excerpt: excerpt,
+        coverImage: formData.coverImage || null,
       });
 
       setLastSaved(new Date());

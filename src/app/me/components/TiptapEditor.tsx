@@ -4,6 +4,7 @@ import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Button } from "@/components/ui/button";
+import { TableKit } from "@tiptap/extension-table";
 import {
   Bold,
   Italic,
@@ -92,6 +93,7 @@ export default function TiptapEditor({
       CodeBlockLowlight.configure({
         lowlight: _lowlight,
       }),
+      TableKit,
       Markdown.configure({
         html: true, // Allow HTML input/output
         tightLists: true, // No <p> inside <li> in markdown output

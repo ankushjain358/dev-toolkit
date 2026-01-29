@@ -253,10 +253,9 @@ export default function BlogsPage() {
     }
   };
 
-  const getContentPreview = (content: Nullable<string> | undefined): string => {
-    if (!content) return "No content yet...";
-    const plainText = stripHtml(content);
-    return truncateText(plainText, 120);
+  const getContentPreview = (excerpt: Nullable<string> | undefined): string => {
+    if (!excerpt) return "No content yet...";
+    return excerpt;
   };
 
   return (
@@ -397,7 +396,7 @@ export default function BlogsPage() {
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                    {getContentPreview(blog.contentHtml)}
+                    {getContentPreview(blog.excerpt)}
                   </p>
                   <div className="text-xs text-muted-foreground truncate">
                     <span className="mr-2">
