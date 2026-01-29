@@ -12,7 +12,7 @@ const schema = a
         state: a.enum(["UNPUBLISHED", "PUBLISHED"]),
         contentJson: a.string(), // JSON content from Tiptap
         contentHtml: a.string(), // HTML content from Tiptap
-        excerpt: a.string().required(), // First 50 chars of content + "..."
+        excerpt: a.string(), // First 50 chars of content + "..."
         coverImage: a.string(), // S3 key for cover image
         // Add relationship field to the join model with the reference of `blogId`
         tags: a.hasMany("BlogTag", "blogId"),
