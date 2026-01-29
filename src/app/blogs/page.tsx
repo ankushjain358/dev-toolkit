@@ -16,10 +16,9 @@ interface BlogWithAuthor extends Blog {
   author?: Profile | null;
 }
 
-const getContentPreview = (content: string | null | undefined): string => {
-  if (!content) return "No content available...";
-  const plainText = stripHtml(content);
-  return truncateText(plainText, 150);
+const getContentPreview = (excerpt: string | null | undefined): string => {
+  if (!excerpt) return "No content available...";
+  return excerpt;
 };
 
 const getAvatarUrl = (avatarUrl: string | null | undefined) => {
@@ -56,7 +55,10 @@ async function fetchBlogsWithAuthors(): Promise<BlogWithAuthor[]> {
       }),
     );
 
-    return blogsWithAuthors;
+    // Sort by createdAt descending (newest first)
+    return blogsWithAuthors.sort((a, b) =>
+      (b.createdAt || "").localeCompare(a.createdAt || ""),
+    );
   } catch (error) {
     console.error("Error fetching blogs:", error);
     return [];
@@ -99,7 +101,7 @@ export default async function BlogsPage() {
                         </Link>
                       </h3>
                       <p className="text-muted-foreground text-sm line-clamp-3">
-                        {getContentPreview(blog.contentHtml)}
+                        {getContentPreview(blog.excerpt)}
                       </p>
                     </div>
 

@@ -2,6 +2,16 @@
 
 Dev Toolkit is a comprehensive productivity platform built with Next.js 15 and AWS Amplify Gen 2. It provides a unified workspace for managing blogs, bookmarks, Notion-style notes, and Kanban boards with auto-save functionality and responsive design.
 
+## Running App Locally
+
+1. Clone the repository on your local machine.
+2. Run `npm install` to install dependencies.
+3. Configure AWS credentials by running `aws configure` or setting environment variables.
+4. Run `npx ampx sandbox` to provision backend infra in AWS.
+   > When you deploy a cloud sandbox, Amplify creates an AWS CloudFormation stack following the naming convention of `amplify-<app-name>-<$(whoami)>-sandbox` in your AWS account with the resources configured in your amplify/ folder.
+5. Run `npm run dev` to run the app.
+6. Open `http://localhost:3000` with your browser to see the result.
+
 ## Tech Stack
 
 ### Frontend
@@ -29,6 +39,11 @@ Dev Toolkit is a comprehensive productivity platform built with Next.js 15 and A
 - **Husky** for pre-commit hooks
 - **Multi-environment deployment** (dev/stage/prod)
 
+## Coding Assistant - Project context files
+
+- `.github\copilot-instructions.md`
+- `AmazonQ.md`
+
 ## CI/CD Pipeline
 
 The project uses GitHub Actions for automated deployment across multiple environments:
@@ -39,19 +54,42 @@ The project uses GitHub Actions for automated deployment across multiple environ
 - **AWS Authentication**: OIDC integration for secure deployments
 - **Node.js 24.x** runtime with npm caching for faster builds
 
-## Running App Locally
+Absolutely 👍 — here’s a **minimal, consumer-friendly** version that keeps things clear without feeling heavy or technical:
 
-1. Clone the repository on your local machine.
-2. Run `npm install` to install dependencies.
-3. Configure AWS credentials by running `aws configure` or setting environment variables.
-4. Run `npx ampx sandbox` to provision backend infra in AWS.
-   > When you deploy a cloud sandbox, Amplify creates an AWS CloudFormation stack following the naming convention of `amplify-<app-name>-<$(whoami)>-sandbox` in your AWS account with the resources configured in your amplify/ folder.
-5. Run `npm run dev` to run the app.
-6. Open `http://localhost:3000` with your browser to see the result.
+---
+
+Nice catch 👍 — here’s the **corrected and reordered** version, still minimal and easy to scan:
+
+---
 
 ## Deploying to AWS
 
-TODO
+There are two ways to deploy the application on AWS:
+
+- **AWS Amplify CI/CD**
+- **GitHub Actions**
+
+> **Cost note:** Amplify charges **$0.01 per build minute**, while **GitHub Actions offers 2,000 free build minutes per month**.
+
+Deployment includes:
+
+- **Backend & infrastructure** (AWS CDK)
+- **Frontend** (AWS Amplify)
+
+### Deployment Coverage
+
+| Deployment Method     | Backend                    | Frontend                         |
+| --------------------- | -------------------------- | -------------------------------- |
+| **AWS Amplify CI/CD** | ✅ Deploys backend & infra | ✅ Build & deploy                |
+| **GitHub Actions**    | ✅ Deploys backend & infra | 🔔 Triggered via Amplify webhook |
+
+### Using AWS Amplify CI/CD
+
+Use this when you want Amplify to manage both backend and frontend deployments.
+
+### Using GitHub Actions
+
+Use this when you want GitHub Actions to deploy the backend and trigger the frontend build on Amplify.
 
 ## Architecture
 
@@ -61,9 +99,9 @@ TODO
 
 To keep code consistent and maintainable, this project uses the following tools:
 
-- **ESLint** — static code analysis to catch problems and enforce code style rules.
-- **Prettier** — automatic code formatting to keep formatting consistent across the project.
-- **Husky + lint-staged** — runs linters and Prettier on changed files as a pre-commit hook, ensuring only linted/formatted files are committed.
+- **ESLint** - static code analysis to catch problems and enforce code style rules.
+- **Prettier** - automatic code formatting to keep formatting consistent across the project.
+- **Husky + lint-staged** - runs linters and Prettier on changed files as a pre-commit hook, ensuring only linted/formatted files are committed.
 
 ### Running hooks / tools manually
 
