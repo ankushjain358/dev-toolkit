@@ -126,28 +126,34 @@ Follow the step by step process:
 1. Go to AWS Amplify Console, and create an Amplify by following the steps give below.
 
    > In this step, we're just connecting **develop** branch (dev environment)
-   - Step 1 - Create new Amplify app, select GitHub as Git provider.
 
-     ![Step 1](design-docs/deployment-guide/step-1.png)
+- Step 1 - Create new Amplify app, select GitHub as Git provider.
 
-   - Step 2 - Select the forked repository, and **develop** as branch
+  ![Step 1](design-docs/deployment-guide/step-1.png)
 
-     ![Step 2](design-docs/deployment-guide/step-2.png)
+- Step 2 - Select the forked repository, and **develop** as branch
 
-   - Step 3 - Provide app name, and select either the role (AmplifyServiceRole) you created above or select **Create and use a new service role**
+  ![Step 2](design-docs/deployment-guide/step-2.png)
 
-     ![Step 3](design-docs/deployment-guide/step-3.png)
+- Step 3 - Provide app name, and select either the role (AmplifyServiceRole) you created above or select **Create and use a new service role**
 
-   - Step 4 - Review the settings, and press **Save and deploy**
+  ![Step 3](design-docs/deployment-guide/step-3.png)
 
-     ![Step 4](design-docs/deployment-guide/step-4.png)
+- Step 4 - Review the settings, and press **Save and deploy**
 
-   - Step 5 - **Disable Auto-build** for your branch. Go to **App settings > Branch settings > Select branch > Actions (Disable auto build)**. This ensures code commits to your branch will not trigger a build in Amplify.
+  ![Step 4](design-docs/deployment-guide/step-4.png)
 
-   - Step 6 - (Optional) Cancel the initial pipeline - **Go to Overview > Select Branch > Branch deployment page (cancel running pipeline from here)**
-   - Step 7 - Create a webhook URL, go to **Hosting > Build settings > Create webhook**, and copy the URL which we will use later.
-     - 1. **Webhook name:** deploy-develop-branch
-     - 2. **branch to build**: develop
+- Step 5 - **Disable Auto-build** for your branch. Go to **App settings > Branch settings > Select branch > Actions (Disable auto build)**. This ensures code commits to your branch will not trigger a build in Amplify.
+
+- Step 6 - (Optional) Cancel the initial pipeline - **Go to Overview > Select Branch > Branch deployment page (cancel running pipeline from here)**
+
+- Step 7 - Create a webhook URL, go to **Hosting > Build settings > Create webhook**, and copy the URL which we will use later.
+  - 1. **Webhook name:** deploy-develop-branch
+  - 2. **branch to build**: develop
+
+- Step 8 - Go to **App settings > Branch settings > Add branch**, add **main**, and also generate a webhook URL for **main** branch.
+  - 1. **Webhook name:** deploy-main-branch
+  - 2. **branch to build**: main
 
 1. Creating IAM role for the GitHub repository (GitHub actions for the repository)
    - Create an OIDC provider for GitHub in your AWS account. Refer [AWS blog](https://aws.amazon.com/blogs/security/use-iam-roles-to-connect-github-actions-to-actions-in-aws/).
