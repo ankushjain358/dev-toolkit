@@ -107,15 +107,19 @@ Deployment includes:
 
 4. Go to the AWS Amplify Console and create a new Amplify app:
    - **Step 1**: Select **GitHub** as the Git provider.
+
      ![Step 1](design-docs/deployment-guide/step-1.png)
 
    - **Step 2**: Select the forked repository and the **main** branch.
+
      ![Step 2](design-docs/deployment-guide/step-2.png)
 
    - **Step 3**: Provide an app name and select either the existing role (`AmplifyServiceRole`) or choose **Create and use a new service role**.
+
      ![Step 3](design-docs/deployment-guide/step-3.png)
 
    - **Step 4**: Review the settings and click **Save and deploy**.
+
      ![Step 4](design-docs/deployment-guide/step-4.png)
 
 5. Next, refer to the **Adding Custom Domain and SSL Certificate** section (TODO).
@@ -146,15 +150,19 @@ Deployment includes:
 
 5. In the AWS Amplify Console, create an Amplify app and connect the **develop** branch (dev environment):
    - **Step 1**: Select GitHub as the provider.
+
      ![Step 1](design-docs/deployment-guide/step-1.png)
 
    - **Step 2**: Select the forked repository and the **develop** branch.
+
      ![Step 2](design-docs/deployment-guide/step-2.png)
 
    - **Step 3**: Provide an app name and select an existing or new service role.
+
      ![Step 3](design-docs/deployment-guide/step-3.png)
 
    - **Step 4**: Review and click **Save and deploy**.
+
      ![Step 4](design-docs/deployment-guide/step-4.png)
 
    - **Step 5**: Disable auto-build for the branch:
