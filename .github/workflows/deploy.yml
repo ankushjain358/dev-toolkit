@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main
-      - dev
+      - develop
+  workflow_dispatch:
 
 # Permission can be added at job level or workflow level
 permissions:
@@ -18,10 +19,18 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Environment mapping: main -> prod, dev -> dev
-    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'dev' && 'dev' }}
+    # Environment mapping: main -> prod, develop -> dev
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'develop' && 'dev' }}
 
     steps:
+      - name: Validate branch
+        run: |
+          BR="${{ github.ref_name }}"
+          if [ "$BR" != "main" ] && [ "$BR" != "develop" ]; then
+            echo "This workflow only runs for branches: main, develop. Current branch: $BR"
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v4
 
