@@ -1,7 +1,13 @@
 "use client";
 
-import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
+import {
+  useEditor,
+  EditorContent,
+  useEditorState,
+  ReactNodeViewRenderer,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { TextSelection } from "@tiptap/pm/state";
 import Image from "@tiptap/extension-image";
 import { Button } from "@/components/ui/button";
 import { TableKit } from "@tiptap/extension-table";
@@ -10,6 +16,7 @@ import {
   Italic,
   Strikethrough,
   Code,
+  Code2,
   Heading1,
   Heading2,
   List,
@@ -18,11 +25,14 @@ import {
   Undo,
   Redo,
   ImageIcon,
+  FileText,
+  Download,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Markdown } from "tiptap-markdown";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { all, createLowlight } from "lowlight";
+import CodeBlockComponent from "./CodeBlockComponent";
 
 // create a lowlight instance with all languages loaded
 const _lowlight = createLowlight(all);
@@ -90,9 +100,14 @@ export default function TiptapEditor({
           class: "max-w-full h-auto rounded-lg",
         },
       }),
-      CodeBlockLowlight.configure({
+      CodeBlockLowlight.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(CodeBlockComponent);
+        },
+      }).configure({
         lowlight: _lowlight,
       }),
+      // Support hard line breaks (Shift+Enter) so they become hardBreak nodes
       TableKit,
       Markdown.configure({
         html: true, // Allow HTML input/output
@@ -112,6 +127,34 @@ export default function TiptapEditor({
     },
     editorProps: {
       handlePaste,
+      handleKeyDown: (view, event) => {
+        // Ctrl+Shift+Enter or Cmd+Shift+Enter to insert code block and exit list
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.shiftKey &&
+          event.key === "Enter"
+        ) {
+          event.preventDefault();
+          const { state, dispatch } = view;
+          const { $from } = state.selection;
+
+          // Create transaction and insert code block
+          let tr = state.tr;
+          const insertPos = $from.after();
+
+          // Insert the code block node
+          tr = tr.insert(insertPos, state.schema.nodes.codeBlock.create());
+
+          // Set selection to the newly inserted code block
+          tr = tr.setSelection(
+            new TextSelection(tr.doc.resolve(insertPos + 1)),
+          );
+
+          dispatch(tr);
+          return true;
+        }
+        return false;
+      },
     },
   });
 
@@ -212,6 +255,15 @@ export default function TiptapEditor({
         >
           P
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          className={editor.isActive("codeBlock") ? "bg-muted" : ""}
+        >
+          <Code2 className="h-4 w-4" />
+        </Button>
         <div className="w-px h-6 bg-border mx-1" />
         <Button
           type="button"
@@ -280,6 +332,41 @@ export default function TiptapEditor({
           disabled={!canRedo}
         >
           <Redo className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            if (!editor) return;
+            try {
+              const storage: any = (editor as any).storage;
+              const md =
+                storage?.markdown &&
+                typeof storage.markdown.getMarkdown === "function"
+                  ? storage.markdown.getMarkdown()
+                  : null;
+
+              const markdown = md || "";
+              const blob = new Blob([markdown], { type: "text/markdown" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "Blog.md";
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(url);
+              toast.success("Exported markdown", { id: "export-md" });
+            } catch (e) {
+              console.error(e);
+              toast.error("Failed to export markdown", { id: "export-md" });
+            }
+          }}
+          title="Export Markdown"
+        >
+          Export Markdown
+          <Download className="h-4 w-4" />
         </Button>
       </div>
       <EditorContent

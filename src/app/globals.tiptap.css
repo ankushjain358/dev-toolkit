@@ -157,6 +157,20 @@
 }
 
 /* Code - Blocks */
+.tiptap .code-block {
+  position: relative;
+}
+
+.tiptap .code-block select {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  z-index: 10;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
 .tiptap pre {
   background: #f6f8fa;
   border-radius: 6px;
