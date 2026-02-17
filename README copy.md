@@ -19,6 +19,18 @@ Dev Toolkit is a comprehensive productivity platform built with **Next.js 15** a
 
 ---
 
+## CI/CD Pipeline
+
+The project uses **GitHub Actions** for automated deployment across multiple environments.
+
+- **Triggers**: Pushes to `main`, `stage`, or `prod` branches
+- **Backend Deployment**: Uses `ampx pipeline-deploy` with branch-specific environments
+- **Frontend Deployment**: Triggers an Amplify webhook for frontend builds
+- **AWS Authentication**: OIDC integration for secure deployments
+- **Runtime**: Node.js **24.x**, with npm caching for faster builds
+
+---
+
 ## Deploying to AWS
 
 There are two ways to deploy the application to AWS:
@@ -44,25 +56,9 @@ Deployment includes:
 
 ---
 
-## Deployment Option #1: Using AWS Amplify CI/CD (Easy)
+## Deployment Option #1 (Easy): Using AWS Amplify CI/CD
 
 > Use this option when you want Amplify to manage both backend and frontend deployments.
-
-### CI/CD Pipeline
-
-The project uses **Amplify CI/CD** for automated deployment.
-
-- **Triggers**: Pushes to `main` branches.
-- **Environments**: `main` is for production.
-- **Backend & Frontend Deployment**: Uses `amplify.yml` to deploy backend and frontend.
-
----
-
-### Architecture
-
-![System Architecture](./design-docs/architecture-design-1.png)
-
----
 
 ### Steps
 
@@ -126,32 +122,13 @@ The project uses **Amplify CI/CD** for automated deployment.
 
      ![Step 4](design-docs/deployment-guide/step-4.png)
 
-5. Next, refer to the **Adding Custom Domain and SSL Certificate** section below.
+5. Next, refer to the **Adding Custom Domain and SSL Certificate** section (TODO).
 
 ---
 
-## Deployment Option #2: Using GitHub Actions (Advanced)
+## Deployment Option #2: Using GitHub Actions
 
 > Use this option when you want GitHub Actions to deploy the backend and trigger the frontend build on Amplify.
-
-### CI/CD Pipeline
-
-The project uses **GitHub Actions** for automated deployment across multiple environments.
-
-- **Triggers**: Pushes to `dev` and `main` branches.
-- **Environments**: `dev` is for development, `main` is for production.
-- **Backend Deployment**: Uses `ampx pipeline-deploy` with branch-specific environments
-- **Frontend Deployment**: Triggers an Amplify webhook for frontend builds
-- **AWS Authentication**: OIDC integration for secure deployments
-- **Runtime**: Node.js **24.x**, with npm caching for faster builds
-
----
-
-### Architecture
-
-![System Architecture](./design-docs/architecture-design-2.png)
-
----
 
 ### Steps
 
@@ -169,78 +146,80 @@ The project uses **GitHub Actions** for automated deployment across multiple env
    - Each branch represents an environment.
    - Multiple environments can exist within the same AWS account.
 
-4. (Optional) Create a reusable Amplify service IAM role using [`create-amplify-role.sh`](scripts/create-amplify-role.sh).
+4. (Optional) Create a reusable Amplify service IAM role using [`create-amplify-role.sh`](docs/create-amplify-role.sh). //TODO: Can move this to scripts folder
 
 5. In the AWS Amplify Console, create an Amplify app and connect the **develop** branch (dev environment):
-   - **Step 1**: Select "Deploy an App" if there is no app.
-   - **Step 2**: Select GitHub as the provider.
+   - **Step 0**: Select "Deploy an App" if there is no app.
+   - **Step 1**: Select GitHub as the provider.
 
-     ![Step 2](design-docs/deployment-guide/custom-domain-with-ssl-1.png)
+     ![Step 1](design-docs/deployment-guide/step-1.png)
 
-   - **Step 3**: Select the forked repository and the **develop** branch.
+   - **Step 2**: Select the forked repository and the **develop** branch. //TODO: Update screenshot with develop
 
-     ![Step 3](design-docs/deployment-guide/custom-domain-with-ssl-2.png)
+     ![Step 2](design-docs/deployment-guide/step-2.png)
 
-   - **Step 4**: Provide an app name and select an existing or new service role.
+   - **Step 3**: Provide an app name and select an existing or new service role. //TODO: Here you may select AmplifyServiceRole
 
-   - **Step 5**: Review and click **Save and deploy**.
+     ![Step 3](design-docs/deployment-guide/step-3.png)
 
-   - **Step 6**: Disable auto-build for the branch:
+   - **Step 4**: Review and click **Save and deploy**.
+
+     ![Step 4](design-docs/deployment-guide/step-4.png)
+
+   - **Step 5**: Disable auto-build for the branch:
      **App settings → Branch settings → Select branch → Actions → Disable auto build**
 
-   - **Step 7 (Optional)**: Cancel the initial pipeline from **Overview → Branch deployment page**.
+   - **Step 6 (Optional)**: Cancel the initial pipeline from **Overview → Branch deployment page**. // TODO: Why, because it will only deploy frontend, but before that we need backend to be deployed so that amplify_output.json file is created.
 
-     > Cancelling the initial pipeline because it only deploys the frontend and requires `amplify_outputs.json` file. Deploy the backend first so the `amplify_outputs.json` file is created and the frontend build can access backend outputs.
-
-   - **Step 8**: Add `main` branch:
+   - **Step 7**: Add `main` branch
      **App settings → Branch settings → Add branch → Select main branch**
 
-   - **Step 9**: Disable auto-build for the branch (main):
+   - **Step 5**: Disable auto-build for the branch:
      **App settings → Branch settings → Select branch (main) → Actions → Disable auto build**
 
-   - **Step 10**: Set `main` as production branch:
+   - **Step 5**: Set `main` as production branch
      **App settings → Branch settings → Select branch (main) → Actions → Set as production branch**
 
-   - **Step 11**: Create webhooks: **Hosting → Build settings → Incoming webhooks → Create webhook**
+   - **Step 7**: Create webhooks: **Hosting → Build settings → Incoming webhooks → Create webhook**
      - For `develop` branch
-       - **Webhook name**: `deploy-develop-branch`
-       - **Branch to build**: `develop`
-     - For `main` branch
-       - **Webhook name**: `deploy-main-branch`
-       - **Branch to build**: `main`
+     - **Webhook name**: `deploy-develop-branch`
+     - **Branch to build**: `develop`
+   - For `main` branch
+     - **Webhook name**: `deploy-main-branch`
+     - **Branch to build**: `main`
 
 6. **Create an IAM role for GitHub Actions**:
+   - Create an OIDC provider for GitHub. Refer to the [AWS blog](https://aws.amazon.com/blogs/security/use-iam-roles-to-connect-github-actions-to-actions-in-aws/).
+     // TODO: Refer "Step 1: Create an OIDC provider in your account" in the blog
 
-- Create an OIDC provider for GitHub. Refer to the [AWS blog](https://aws.amazon.com/blogs/security/use-iam-roles-to-connect-github-actions-to-actions-in-aws/) (see "Step 1: Create an OIDC provider in your account").
+   - Create an IAM role (e.g., `GithubOIDCAdminRole_For_<RepoName>`) and attach the `AdministratorAccess` policy.
 
-- Create an IAM role (e.g., `GithubOIDCAdminRole_For_<RepoName>`) and attach the `AdministratorAccess` policy.
+   - Use the following trust policy (replace placeholders as needed):
 
-- Use the following trust policy (replace placeholders as needed):
+     ```json
+     {
+       "Version": "2012-10-17",
+       "Statement": [
+         {
+           "Effect": "Allow",
+           "Principal": {
+             "Federated": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+           },
+           "Action": "sts:AssumeRoleWithWebIdentity",
+           "Condition": {
+             "StringLike": {
+               "token.actions.githubusercontent.com:sub": "repo:ankushjain358/dev-toolkit:*"
+             }
+           }
+         }
+       ]
+     }
+     ```
 
-  ```json
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Principal": {
-          "Federated": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
-        },
-        "Action": "sts:AssumeRoleWithWebIdentity",
-        "Condition": {
-          "StringLike": {
-            "token.actions.githubusercontent.com:sub": "repo:ankushjain358/dev-toolkit:*"
-          }
-        }
-      }
-    ]
-  }
-  ```
-
-- Note down the IAM role ARN.
+   - Note down the IAM role ARN.
 
 7. Add the following variables in **GitHub Actions secrets and variables**:
-   Go to **Settings → Secrets and variables → Actions** in your repository to add these.
+   //TODO: Go to **Settings → Secrets and variables → Actions**
    - **Repository variables**
      - `AMPLIFY_APP_ID`
 
@@ -251,19 +230,23 @@ The project uses **GitHub Actions** for automated deployment across multiple env
      - `AMPLIFY_WEBHOOK_URL` (dev)
      - `AMPLIFY_WEBHOOK_URL` (prod)
 
-8. Go to **GitHub Actions**, select the **Deploy Amplify Backend** workflow, choose **Run workflow**, select the branch (develop, then main), and run the workflow.
-
-9. Next, refer to the **Adding Custom Domain and SSL Certificate** section below.
+8. Go to **GitHub Actions**, select the **Deploy Amplify Backend** workflow, choose the branch (develop, then main), and run the workflow (TODO).
 
 ---
 
-## Adding Custom Domain and SSL Certificate
+## Adding Custom Domain and SSL Certificate (TODO)
 
 1. Select your amplify app, select first step **Add custom domain** under **Go to production**.
 2. On next page, select Add domain.
 3. On next page, enter domain name and click on **Check domain availability**.
 4. Next, proceed with either **Create hosted zone on Route 53** or **Manual configuration**.
 5. In subsequent steps, you will get instructions to setup domain and **Amplify managed certificate**.
+
+---
+
+## Architecture
+
+![System Architecture](./design-docs/architecture-design.png)
 
 ---
 
