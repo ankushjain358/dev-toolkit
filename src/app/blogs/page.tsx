@@ -1,13 +1,7 @@
-import Link from "next/link";
-import { Calendar, User, ArrowRight } from "lucide-react";
 import type { Schema } from "@/../amplify/data/resource";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ExternalLayout } from "@/components/layout/external-layout";
-import { formatDate, stripHtml, truncateText } from "@/lib/utils";
-import outputs from "@/../amplify_outputs.json";
 import { serverClient } from "@/lib/server-client";
+import { BlogGrid } from "@/components/blog-grid";
 
 type Blog = Schema["Blog"]["type"];
 type Profile = Schema["Profile"]["type"];
@@ -15,16 +9,6 @@ type Profile = Schema["Profile"]["type"];
 interface BlogWithAuthor extends Blog {
   author?: Profile | null;
 }
-
-const getContentPreview = (excerpt: string | null | undefined): string => {
-  if (!excerpt) return "No content available...";
-  return excerpt;
-};
-
-const getAvatarUrl = (avatarUrl: string | null | undefined) => {
-  if (!avatarUrl) return undefined;
-  return `https://${outputs.custom.distributionDomainName}/${avatarUrl}`;
-};
 
 async function fetchBlogsWithAuthors(): Promise<BlogWithAuthor[]> {
   try {
@@ -78,77 +62,7 @@ export default async function BlogsPage() {
           </p>
         </div>
 
-        {blogs.length === 0 ? (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">No articles yet</h3>
-            <p className="text-muted-foreground">
-              Check back soon for new content!
-            </p>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {blogs.map((blog) => (
-              <Card key={blog.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-xl font-semibold mb-2 line-clamp-2">
-                        <Link
-                          href={`/blog/${blog.slug}`}
-                          className="hover:text-primary transition-colors"
-                        >
-                          {blog.title}
-                        </Link>
-                      </h3>
-                      <p className="text-muted-foreground text-sm line-clamp-3">
-                        {getContentPreview(blog.excerpt)}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span>{blog.author?.displayName || "Anonymous"}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{formatDate(blog.createdAt!)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* {blog.tags && blog.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {blog.tags.slice(0, 3).map((tag, index) => (
-                          <Badge
-                            key={index}
-                            variant="secondary"
-                            className="text-xs"
-                          >
-                            {tag?.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    )} */}
-
-                    <div className="pt-2">
-                      <Link href={`/blog/${blog.slug}`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="p-0 h-auto font-medium"
-                        >
-                          Read more <ArrowRight className="h-3 w-3 ml-1" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <BlogGrid blogs={blogs} />
       </div>
     </ExternalLayout>
   );

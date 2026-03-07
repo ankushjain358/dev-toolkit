@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
+import outputs from "./amplify_outputs.json";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: outputs.custom.distributionDomainName,
+      },
+    ],
+  },
 };
 
 export default nextConfig;

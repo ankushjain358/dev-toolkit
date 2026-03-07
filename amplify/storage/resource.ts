@@ -6,6 +6,11 @@ import { defineStorage } from "@aws-amplify/backend";
 export const storage = defineStorage({
   name: "AppStorage",
   access: (allow) => ({
+    // Site related images (logo, og images, etc.)
+    "public/site/*": [
+      allow.authenticated.to(["write", "delete"]), // Authenticated users can manage blog images
+    ],
+
     // Blog-related images (cover images, content images)
     "public/blogs/*": [
       allow.authenticated.to(["write", "delete"]), // Authenticated users can manage blog images

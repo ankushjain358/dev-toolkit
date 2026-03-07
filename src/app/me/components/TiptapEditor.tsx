@@ -9,6 +9,7 @@ import {
 import StarterKit from "@tiptap/starter-kit";
 import { TextSelection } from "@tiptap/pm/state";
 import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
 import { Button } from "@/components/ui/button";
 import { TableKit } from "@tiptap/extension-table";
 import {
@@ -27,6 +28,7 @@ import {
   ImageIcon,
   FileText,
   Download,
+  Link as LinkIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Markdown } from "tiptap-markdown";
@@ -93,6 +95,12 @@ export default function TiptapEditor({
         orderedList: {
           keepMarks: true,
           keepAttributes: false,
+        },
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "text-primary underline cursor-pointer",
         },
       }),
       Image.configure({
@@ -165,17 +173,19 @@ export default function TiptapEditor({
       isItalic: ctx.editor?.isActive("italic") ?? false,
       isStrike: ctx.editor?.isActive("strike") ?? false,
       isCode: ctx.editor?.isActive("code") ?? false,
+      isLink: ctx.editor?.isActive("link") ?? false,
       canUndo: ctx.editor?.can().chain().focus().undo().run() ?? false,
       canRedo: ctx.editor?.can().chain().focus().redo().run() ?? false,
     }),
   });
 
-  const { isBold, isItalic, isStrike, isCode, canUndo, canRedo } =
+  const { isBold, isItalic, isStrike, isCode, isLink, canUndo, canRedo } =
     editorState || {
       isBold: false,
       isItalic: false,
       isStrike: false,
       isCode: false,
+      isLink: false,
       canUndo: false,
       canRedo: false,
     };
@@ -222,6 +232,34 @@ export default function TiptapEditor({
           className={isCode ? "bg-muted" : ""}
         >
           <Code className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const previousUrl = editor.getAttributes("link").href;
+            const url = window.prompt("URL", previousUrl);
+
+            if (url === null) {
+              return;
+            }
+
+            if (url === "") {
+              editor.chain().focus().extendMarkRange("link").unsetLink().run();
+              return;
+            }
+
+            editor
+              .chain()
+              .focus()
+              .extendMarkRange("link")
+              .setLink({ href: url })
+              .run();
+          }}
+          className={isLink ? "bg-muted" : ""}
+        >
+          <LinkIcon className="h-4 w-4" />
         </Button>
         <div className="w-px h-6 bg-border mx-1" />
         <Button
