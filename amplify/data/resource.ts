@@ -53,43 +53,42 @@ const schema = a
         allow.publicApiKey().to(["read"]),
       ]),
 
-    // SiteSettings: a
-    //   .model({
-    //     // Tenant boundary
-    //     siteId: a.string(),
+    SiteSettings: a
+      .model({
+        id: a.id().required(),
 
-    //     // Branding
-    //     logoUrl: a.string(),
-    //     faviconUrl: a.string(),
+        // Branding Settings
+        siteName: a.string(),
+        tagline: a.string(),
+        logoLightUrl: a.string(),
+        logoDarkUrl: a.string(),
+        faviconUrl: a.string(),
+        bannerTitle: a.string(),
+        bannerDescription: a.string(),
 
-    //     // Home page
-    //     homeBannerTitle: a.string(),
-    //     homeBannerSubtitle: a.string(),
-    //     homeBannerImageUrl: a.string(),
-    //     tagline: a.string(),
+        // Social & Contact
+        email: a.string(),
+        website: a.string(),
+        twitterUrl: a.string(),
+        linkedinUrl: a.string(),
+        githubUrl: a.string(),
+        instagramUrl: a.string(),
 
-    //     // About page
-    //     aboutTitle: a.string(),
-    //     aboutSubtitle: a.string(),
-    //     aboutDescription: a.string(),
+        // About Section
+        aboutPhotoUrl: a.string(),
+        aboutText: a.string(),
 
-    //     // Social links (explicit fields)
-    //     twitterUrl: a.string(),
-    //     linkedinUrl: a.string(),
-    //     instagramUrl: a.string(),
-    //     facebookUrl: a.string(),
-    //     youtubeUrl: a.string(),
-    //     githubUrl: a.string(),
-
-    //     // SEO
-    //     metaTitle: a.string(),
-    //     metaDescription: a.string(),
-    //   })
-    //   .identifier(["siteId"])
-    //   .authorization((allow) => [
-    //     allow.authenticated().to(["read", "create", "update"]),
-    //     allow.guest().to(["read"]),
-    //   ]),
+        // SEO Fields
+        metaTitle: a.string(),
+        metaDescription: a.string(),
+        ogImageUrl: a.string(),
+        googleAnalyticsId: a.string(),
+        keywords: a.string(),
+      })
+      .authorization((allow) => [
+        allow.authenticated().to(["read", "create", "update"]),
+        allow.publicApiKey().to(["read"]),
+      ]),
 
     Profile: a
       .model({

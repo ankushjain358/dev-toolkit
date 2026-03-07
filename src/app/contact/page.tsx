@@ -1,62 +1,112 @@
 import { ExternalLayout } from "@/components/layout/external-layout";
+import { getSiteSettings } from "@/services/common.service";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mail, MessageSquare, Github } from "lucide-react";
+import {
+  Mail,
+  Globe,
+  Twitter,
+  Linkedin,
+  Github,
+  Instagram,
+} from "lucide-react";
+import Link from "next/link";
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const settings = await getSiteSettings();
+
+  const contactMethods = [
+    {
+      icon: Mail,
+      label: "Email",
+      value: settings.email,
+      href: settings.email ? `mailto:${settings.email}` : null,
+    },
+    {
+      icon: Globe,
+      label: "Website",
+      value: settings.website,
+      href: settings.website,
+    },
+    {
+      icon: Twitter,
+      label: "Twitter",
+      value: settings.twitterUrl,
+      href: settings.twitterUrl,
+    },
+    {
+      icon: Linkedin,
+      label: "LinkedIn",
+      value: settings.linkedinUrl,
+      href: settings.linkedinUrl,
+    },
+    {
+      icon: Github,
+      label: "GitHub",
+      value: settings.githubUrl,
+      href: settings.githubUrl,
+    },
+    {
+      icon: Instagram,
+      label: "Instagram",
+      value: settings.instagramUrl,
+      href: settings.instagramUrl,
+    },
+  ].filter((method) => method.value);
+
   return (
     <ExternalLayout>
       <div className="container max-w-4xl mx-auto py-16 px-4">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Get in Touch</h1>
-          <p className="text-xl text-muted-foreground">
-            We&apos;d love to hear from you. Send us a message and we&apos;ll
-            respond as soon as possible.
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold mb-4">Get in Touch</h1>
+          <div className="w-20 h-1 bg-primary mx-auto mb-6" />
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Have a question or want to connect? Reach out through any of the
+            channels below.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Mail className="h-8 w-8 text-primary mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">Email</h3>
-              <p className="text-muted-foreground text-sm">
-                hello@devtoolkit.com
-              </p>
-            </CardContent>
-          </Card>
+        {contactMethods.length > 0 ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {contactMethods.map((method) => {
+              const Icon = method.icon;
+              const content = (
+                <Card className="h-full transition-all hover:shadow-lg hover:-translate-y-1">
+                  <CardContent className="p-8 text-center">
+                    <Icon className="h-10 w-10 text-primary mx-auto mb-4" />
+                    <h3 className="font-semibold text-lg mb-2">
+                      {method.label}
+                    </h3>
+                    <p className="text-sm text-muted-foreground break-words">
+                      {method.label === "Email"
+                        ? method.value
+                        : method.value?.replace(/^https?:\/\//, "")}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
 
-          <Card>
-            <CardContent className="p-6 text-center">
-              <MessageSquare className="h-8 w-8 text-primary mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">Support</h3>
-              <p className="text-muted-foreground text-sm">
-                support@devtoolkit.com
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Github className="h-8 w-8 text-primary mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">GitHub</h3>
-              <p className="text-muted-foreground text-sm">
-                github.com/devtoolkit
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardContent className="p-8">
-            <h2 className="text-2xl font-semibold mb-4 text-center">
-              Contact Form
-            </h2>
-            <p className="text-center text-muted-foreground mb-8">
-              Contact form functionality will be available soon. For now, please
-              reach out via email.
+              return method.href ? (
+                <Link
+                  key={method.label}
+                  href={method.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div key={method.label}>{content}</div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <p className="text-muted-foreground text-lg">
+              No contact information available yet.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
     </ExternalLayout>
   );

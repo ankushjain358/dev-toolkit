@@ -29,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import outputs from "@/../amplify_outputs.json";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -363,7 +364,7 @@ export default function BlogsPage() {
                 <div className="w-16 h-16 rounded-md overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
                   {blog.coverImage ? (
                     <img
-                      src={blog.coverImage}
+                      src={`https://${outputs.custom.distributionDomainName}/${blog.coverImage}`}
                       alt={blog.title}
                       className="w-full h-full object-cover"
                     />

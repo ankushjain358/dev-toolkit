@@ -116,8 +116,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         data: file,
       }).result;
 
-      const distributionUrl = `https://${outputs.custom.distributionDomainName}/${key}`;
-      return distributionUrl;
+      return key;
     } catch (error) {
       console.error("Image upload failed:", error);
       toast.error("Failed to upload image");
@@ -275,8 +274,8 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     toast.loading("Uploading cover image...", { id: "cover-upload" });
 
     try {
-      const url = await uploadImageHandler(file, "cover");
-      form.setValue("coverImage", url, { shouldDirty: true });
+      const key = await uploadImageHandler(file, "cover");
+      form.setValue("coverImage", key, { shouldDirty: true });
       toast.success("Cover image uploaded successfully!", {
         id: "cover-upload",
       });
@@ -287,7 +286,8 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   };
 
   const handleImageUpload = async (file: File): Promise<string> => {
-    const url = await uploadImageHandler(file);
+    const key = await uploadImageHandler(file);
+    const url = `https://${outputs.custom.distributionDomainName}/${key}`;
     return url;
   };
 
@@ -516,7 +516,12 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                   name="coverImage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cover Image</FormLabel>
+                      <FormLabel>
+                        Cover Image{" "}
+                        <span className="text-xs text-muted-foreground font-normal">
+                          (16:9 ratio recommended)
+                        </span>
+                      </FormLabel>
                       <div className="flex items-center gap-4">
                         <input
                           type="file"
@@ -533,7 +538,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
                         {field.value && (
                           <div className="flex items-start gap-4">
                             <img
-                              src={field.value}
+                              src={`https://${outputs.custom.distributionDomainName}/${field.value}`}
                               alt="Cover"
                               className="max-w-48 max-h-32 object-contain rounded-md border"
                             />

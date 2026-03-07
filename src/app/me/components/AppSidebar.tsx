@@ -105,6 +105,11 @@ const data = {
           icon: "Settings",
           subItems: [
             {
+              title: "Site Settings",
+              url: "/me/settings",
+              icon: "Settings",
+            },
+            {
               title: "Tags",
               url: "/me/settings/tags",
               icon: "Tags",

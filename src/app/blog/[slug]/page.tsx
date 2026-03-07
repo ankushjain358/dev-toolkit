@@ -18,6 +18,11 @@ const getAvatarUrl = (avatarUrl: string | null | undefined) => {
   return `https://${outputs.custom.distributionDomainName}/${avatarUrl}`;
 };
 
+const getCoverImageUrl = (coverImage: string | null | undefined) => {
+  if (!coverImage) return undefined;
+  return `https://${outputs.custom.distributionDomainName}/${coverImage}`;
+};
+
 interface BlogDetailProps {
   params: Promise<{ slug: string }>;
 }
@@ -42,7 +47,7 @@ async function getBlogWithAuthor(slug: string) {
   }
 
   // Fetch tags for this blog
-  let tags: Array<{ id: string; name?: string }> = [];
+  let tags: Array<{ id: string; name?: string; slug?: string }> = [];
   try {
     tags = await getTagsForBlog(blog.id);
   } catch (error) {
@@ -106,9 +111,14 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
           {tags && tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-8">
               {tags.map((tag) => (
-                <Badge key={tag.id} variant="secondary">
-                  {tag?.name}
-                </Badge>
+                <Link key={tag.id} href={`/tag/${tag.id}/${tag.slug}`}>
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer hover:bg-secondary/80"
+                  >
+                    {tag?.name}
+                  </Badge>
+                </Link>
               ))}
             </div>
           )}
@@ -117,9 +127,9 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
           {blog.coverImage && (
             <div className="mb-8">
               <img
-                src={blog.coverImage}
+                src={getCoverImageUrl(blog.coverImage)}
                 alt={blog.title}
-                className="w-full h-64 md:h-96 object-cover rounded-lg"
+                className="w-full h-64 md:h-96 object-contain rounded-lg"
               />
             </div>
           )}
