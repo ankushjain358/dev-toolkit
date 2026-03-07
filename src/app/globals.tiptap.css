@@ -156,6 +156,26 @@
   color: #e6edf3;
 }
 
+/* Strong/Bold text */
+.tiptap strong {
+  font-weight: 600;
+}
+
+/* Links */
+.tiptap a {
+  color: #0969da;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dark .tiptap a {
+  color: #58a6ff;
+}
+
+.tiptap a:hover {
+  text-decoration: none;
+}
+
 /* Code - Blocks */
 .tiptap .code-block {
   position: relative;
