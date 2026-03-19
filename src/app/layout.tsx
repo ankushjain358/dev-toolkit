@@ -6,6 +6,8 @@ import "@aws-amplify/ui-react/styles.css";
 import ConfigureAmplifyClientSide from "@/components/ConfigureAmplifyClientSide";
 import QueryProvider from "@/components/QueryProvider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getSiteSettings } from "@/services/common.service";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,20 +19,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Dev Toolkit - Productivity Platform for Developers",
-  description:
-    "A comprehensive productivity platform for developers. Manage your blogs, bookmarks, notes, and projects all in one place.",
-  icons: {
-    icon: "/favicon.png",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  return {
+    title: settings.metaTitle,
+    description: settings.metaDescription,
+    keywords: settings.keywords || undefined,
+    icons: {
+      icon: "/favicon.png",
+    },
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await getSiteSettings();
+  const gaId = settings.googleAnalyticsId;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -57,6 +65,8 @@ export default function RootLayout({
             />
           </QueryProvider>
         </ThemeProvider>
+
+        {gaId && <GoogleAnalytics gaId={gaId} />}
       </body>
     </html>
   );
