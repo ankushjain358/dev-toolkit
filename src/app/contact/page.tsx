@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+export const revalidate = 86400; // Revalidate contact page daily
+
 export default async function ContactPage() {
   const settings = await getSiteSettings();
 

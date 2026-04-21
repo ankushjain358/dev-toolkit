@@ -3,6 +3,8 @@ import { getSiteSettings } from "@/services/common.service";
 import outputs from "@/../amplify_outputs.json";
 import { marked } from "marked";
 
+export const revalidate = 86400; // Revalidate about page daily
+
 export default async function AboutPage() {
   const settings = await getSiteSettings();
   const photoUrl = settings.aboutPhotoUrl

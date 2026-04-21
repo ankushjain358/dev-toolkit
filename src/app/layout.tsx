@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cache } from "react";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import "@aws-amplify/ui-react/styles.css";
@@ -19,8 +20,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const getCachedSiteSettings = cache(getSiteSettings);
+
+export const revalidate = 3600; // Revalidate shared layout data every hour
+
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
+  const settings = await getCachedSiteSettings();
   return {
     title: settings.metaTitle,
     description: settings.metaDescription,
@@ -36,7 +41,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await getSiteSettings();
+  const settings = await getCachedSiteSettings();
   const gaId = settings.googleAnalyticsId;
 
   return (

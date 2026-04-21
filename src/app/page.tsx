@@ -8,6 +8,8 @@ import { BlogGrid } from "@/components/blog-grid";
 import { serverClient } from "@/lib/server-client";
 import type { Schema } from "@/../amplify/data/resource";
 
+export const revalidate = 600; // Revalidate homepage every 10 minutes
+
 type Blog = Schema["Blog"]["type"];
 type Profile = Schema["Profile"]["type"];
 

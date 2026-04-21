@@ -14,6 +14,8 @@ import outputs from "@/../amplify_outputs.json";
 import { getBlogBySlug, getTagsForBlog } from "@/lib/server-client";
 import TableOfContents from "@/components/TableOfContents";
 
+export const revalidate = 3600; // Revalidate blog pages every hour
+
 type Profile = Schema["Profile"]["type"];
 
 const getAvatarUrl = (avatarUrl: string | null | undefined) => {
@@ -260,4 +262,22 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
       </div>
     </ExternalLayout>
   );
+}
+
+export async function generateStaticParams() {
+  try {
+    const { serverClient } = await import("@/lib/server-client");
+    const { data: blogs } = await serverClient.models.Blog.list({
+      filter: { state: { eq: "PUBLISHED" } },
+    });
+
+    if (!blogs) return [];
+
+    return blogs.map((blog) => ({
+      slug: blog.slug,
+    }));
+  } catch (error) {
+    console.error("Error generating static params for blogs:", error);
+    return [];
+  }
 }

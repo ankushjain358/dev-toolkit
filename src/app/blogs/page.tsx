@@ -3,6 +3,8 @@ import { ExternalLayout } from "@/components/layout/external-layout";
 import { serverClient } from "@/lib/server-client";
 import { BlogGrid } from "@/components/blog-grid";
 
+export const revalidate = 1800; // Revalidate blog list every 30 minutes
+
 type Blog = Schema["Blog"]["type"];
 type Profile = Schema["Profile"]["type"];
 
