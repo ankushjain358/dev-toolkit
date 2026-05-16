@@ -1,5 +1,5 @@
-import { getSiteSettings } from "@/services/common.service";
 import outputs from "@/../amplify_outputs.json";
+import { getSiteSettings } from "@/services/db.service";
 import {
   Twitter,
   Linkedin,

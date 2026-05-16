@@ -23,6 +23,7 @@ import { generateSlug } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { QUERY_KEYS } from "@/lib/app-constants";
 import { useQueryClient } from "@tanstack/react-query";
+import { cacheService } from "@/services/cache.service";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -155,6 +156,7 @@ export default function TagsPage() {
       );
       setEditingTag(null);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TAGS });
+      cacheService.clearTagCache(tagId, slug);
       toast.success("Tag updated successfully!");
     } catch (error) {
       console.error("Error updating tag:", error);

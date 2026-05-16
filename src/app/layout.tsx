@@ -6,8 +6,10 @@ import "@aws-amplify/ui-react/styles.css";
 import ConfigureAmplifyClientSide from "@/components/ConfigureAmplifyClientSide";
 import QueryProvider from "@/components/QueryProvider";
 import { ThemeProvider } from "@/components/theme-provider";
-import { getSiteSettings } from "@/services/common.service";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { getSiteSettings } from "@/services/db.service";
+
+export const revalidate = 86400;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
