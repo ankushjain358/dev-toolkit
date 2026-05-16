@@ -65,6 +65,7 @@ import { Input } from "@/components/ui/input";
 import { orderBy } from "lodash";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/app-constants";
+import { cacheService } from "@/services/cache.service";
 
 const client = generateClient<Schema>();
 
@@ -215,6 +216,7 @@ export default function BlogsPage() {
 
       if (updatedBlog) {
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BLOGS(userId!) });
+        cacheService.clearListingCache();
         toast.success(`Blog ${newState.toLowerCase()} successfully!`);
       }
     } catch (error) {

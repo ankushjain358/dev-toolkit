@@ -3,74 +3,42 @@ import { Calendar, User, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { cache } from "react";
-import type { Schema } from "@/../amplify/data/resource";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ExternalLayout } from "@/components/layout/external-layout";
 import { formatDate } from "@/lib/utils";
 import { highlightHtmlCodeBlocks } from "@/lib/highlight-html";
-import outputs from "@/../amplify_outputs.json";
-import { getBlogBySlug, getTagsForBlog } from "@/lib/server-client";
+import { getBlogDetail, getPublishedBlogSlugs } from "@/services/db.service";
 import TableOfContents from "@/components/TableOfContents";
-
-type Profile = Schema["Profile"]["type"];
-
-const getAvatarUrl = (avatarUrl: string | null | undefined) => {
-  if (!avatarUrl) return undefined;
-  return `https://${outputs.custom.distributionDomainName}/${avatarUrl}`;
-};
-
-const getCoverImageUrl = (coverImage: string | null | undefined) => {
-  if (!coverImage) return undefined;
-  return `https://${outputs.custom.distributionDomainName}/${coverImage}`;
-};
 
 interface BlogDetailProps {
   params: Promise<{ slug: string }>;
 }
 
-const getCachedBlogWithAuthor = cache(async (slug: string) => {
-  const blog = await getBlogBySlug(slug);
+/**
+ * Pre-render all published blog slugs at build time.
+ * Next.js will statically generate a page for each slug.
+ */
+export async function generateStaticParams() {
+  const slugs = await getPublishedBlogSlugs();
+  return slugs.map((slug) => ({ slug }));
+}
 
-  if (!blog) {
-    return null;
-  }
-
-  // Fetch author profile
-  let author: Profile | null = null;
-  try {
-    const { serverClient } = await import("@/lib/server-client");
-    const { data: profileData } = await serverClient.models.Profile.get({
-      userId: blog.userId,
-    });
-    author = profileData;
-  } catch (error) {
-    console.error("Error fetching author profile:", error);
-  }
-
-  // Fetch tags for this blog
-  let tags: Array<{ id: string; name?: string; slug?: string }> = [];
-  try {
-    tags = await getTagsForBlog(blog.id);
-  } catch (error) {
-    console.error("Error fetching tags for blog:", error);
-  }
-
-  return { blog, author, tags };
-});
+/**
+ * Cached per-request wrapper around getBlogDetail.
+ * React cache() deduplicates calls within the same render pass,
+ * so generateMetadata and the page component share one DB round-trip.
+ */
+const getCachedBlogDetail = cache(getBlogDetail);
 
 export async function generateMetadata({
   params,
 }: BlogDetailProps): Promise<Metadata> {
   const { slug } = await params;
-  const data = await getCachedBlogWithAuthor(slug);
+  const data = await getCachedBlogDetail(slug);
 
-  if (!data) {
-    return {
-      title: "Blog Not Found",
-    };
-  }
+  if (!data) return { title: "Blog Not Found" };
 
   return {
     title: data.blog.title,
@@ -78,21 +46,15 @@ export async function generateMetadata({
   };
 }
 
-async function getBlogWithAuthor(slug: string) {
-  const data = await getCachedBlogWithAuthor(slug);
-
-  if (!data) {
-    notFound();
-  }
-
-  return data;
-}
-
 export default async function BlogDetailPage({ params }: BlogDetailProps) {
   const { slug } = await params;
-  const { blog, author, tags } = await getBlogWithAuthor(slug);
+  const data = await getCachedBlogDetail(slug);
 
-  // Apply lowlight highlighting to code blocks server-side
+  if (!data) notFound();
+
+  const { blog, author, tags, avatarUrl, coverImageUrl } = data;
+
+  // Apply syntax highlighting to code blocks server-side
   const highlightedContent = blog.contentHtml
     ? await highlightHtmlCodeBlocks(blog.contentHtml)
     : null;
@@ -122,10 +84,7 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
               <div className="flex items-center gap-6 mb-6">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage
-                      src={getAvatarUrl(author?.avatarUrl)}
-                      className="object-cover"
-                    />
+                    <AvatarImage src={avatarUrl} className="object-cover" />
                     <AvatarFallback>
                       {author?.displayName?.charAt(0)?.toUpperCase() || "A"}
                     </AvatarFallback>
@@ -144,7 +103,7 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
               </div>
 
               {/* Tags */}
-              {tags && tags.length > 0 && (
+              {tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-8">
                   {tags.map((tag) => (
                     <Link key={tag.id} href={`/tag/${tag.id}/${tag.slug}`}>
@@ -152,7 +111,7 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
                         variant="secondary"
                         className="cursor-pointer hover:bg-secondary/80"
                       >
-                        {tag?.name}
+                        {tag.name}
                       </Badge>
                     </Link>
                   ))}
@@ -160,10 +119,10 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
               )}
 
               {/* Cover Image */}
-              {blog.coverImage && (
+              {coverImageUrl && (
                 <div className="mb-8">
                   <img
-                    src={getCoverImageUrl(blog.coverImage)}
+                    src={coverImageUrl}
                     alt={blog.title}
                     className="w-full h-64 md:h-96 object-contain rounded-lg"
                   />
@@ -190,7 +149,7 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
                 <div className="mt-16 p-6 bg-muted/50 rounded-lg">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-16 w-16">
-                      <AvatarImage src={getAvatarUrl(author.avatarUrl)} />
+                      <AvatarImage src={avatarUrl} />
                       <AvatarFallback className="text-lg">
                         {author.displayName?.charAt(0)?.toUpperCase() || "A"}
                       </AvatarFallback>

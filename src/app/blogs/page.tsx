@@ -1,56 +1,9 @@
-import type { Schema } from "@/../amplify/data/resource";
 import { ExternalLayout } from "@/components/layout/external-layout";
-import { serverClient } from "@/lib/server-client";
 import { BlogGrid } from "@/components/blog-grid";
-
-type Blog = Schema["Blog"]["type"];
-type Profile = Schema["Profile"]["type"];
-
-interface BlogWithAuthor extends Blog {
-  author?: Profile | null;
-}
-
-async function fetchBlogsWithAuthors(): Promise<BlogWithAuthor[]> {
-  try {
-    const { data: blogs, errors } = await serverClient.models.Blog.list({
-      filter: { state: { eq: "PUBLISHED" } },
-      limit: 6,
-    });
-
-    if (errors) {
-      console.error("GraphQL errors:", errors);
-      return [];
-    }
-
-    if (!blogs) return [];
-
-    // Fetch author profiles for each blog
-    const blogsWithAuthors = await Promise.all(
-      blogs.map(async (blog) => {
-        try {
-          const { data: profile } = await serverClient.models.Profile.get({
-            userId: blog.userId,
-          });
-          return { ...blog, author: profile };
-        } catch (error) {
-          console.error("Error fetching author profile:", error);
-          return { ...blog, author: null };
-        }
-      }),
-    );
-
-    // Sort by createdAt descending (newest first)
-    return blogsWithAuthors.sort((a, b) =>
-      (b.createdAt || "").localeCompare(a.createdAt || ""),
-    );
-  } catch (error) {
-    console.error("Error fetching blogs:", error);
-    return [];
-  }
-}
+import { getPublishedBlogsWithAuthors } from "@/services/db.service";
 
 export default async function BlogsPage() {
-  const blogs = await fetchBlogsWithAuthors();
+  const blogs = await getPublishedBlogsWithAuthors(100);
 
   return (
     <ExternalLayout>

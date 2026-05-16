@@ -3,60 +3,15 @@ import { ArrowRight, Code, Zap, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExternalLayout } from "@/components/layout/external-layout";
-import { getSiteSettings } from "@/services/common.service";
 import { BlogGrid } from "@/components/blog-grid";
-import { serverClient } from "@/lib/server-client";
-import type { Schema } from "@/../amplify/data/resource";
-
-type Blog = Schema["Blog"]["type"];
-type Profile = Schema["Profile"]["type"];
-
-interface BlogWithAuthor extends Blog {
-  author?: Profile | null;
-}
-
-async function fetchBlogsWithAuthors(): Promise<BlogWithAuthor[]> {
-  try {
-    const { data: blogs, errors } = await serverClient.models.Blog.list({
-      filter: { state: { eq: "PUBLISHED" } },
-      limit: 6,
-    });
-
-    if (errors) {
-      console.error("GraphQL errors:", errors);
-      return [];
-    }
-
-    if (!blogs) return [];
-
-    // Fetch author profiles for each blog
-    const blogsWithAuthors = await Promise.all(
-      blogs.map(async (blog) => {
-        try {
-          const { data: profile } = await serverClient.models.Profile.get({
-            userId: blog.userId,
-          });
-          return { ...blog, author: profile };
-        } catch (error) {
-          console.error("Error fetching author profile:", error);
-          return { ...blog, author: null };
-        }
-      }),
-    );
-
-    // Sort by createdAt descending (newest first)
-    return blogsWithAuthors.sort((a, b) =>
-      (b.createdAt || "").localeCompare(a.createdAt || ""),
-    );
-  } catch (error) {
-    console.error("Error fetching blogs:", error);
-    return [];
-  }
-}
+import {
+  getSiteSettings,
+  getPublishedBlogsWithAuthors,
+} from "@/services/db.service";
 
 export default async function HomePage() {
   const settings = await getSiteSettings();
-  const blogs = await fetchBlogsWithAuthors();
+  const blogs = await getPublishedBlogsWithAuthors(6);
   const bannerTitle = settings.bannerTitle;
   const bannerDescription = settings.bannerDescription;
 

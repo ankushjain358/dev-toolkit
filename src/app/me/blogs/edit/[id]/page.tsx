@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/form";
 import { generateUniqueSlug } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/app-constants";
+import { cacheService } from "@/services/cache.service";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -315,6 +316,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         queryKey: QUERY_KEYS.BLOGS(blogRef.current.userId),
       });
 
+      cacheService.clearBlogCache(blogRef.current.slug);
       toast.success(`Blog ${newState.toLowerCase()} successfully!`);
     } catch (error) {
       console.error("Failed to update blog state:", error);
@@ -370,6 +372,12 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       );
       setSelectedTags(validSelectedTags);
       setOriginalTags(validSelectedTags);
+
+      // Clear cache for all affected tag pages
+      validSelectedTags.forEach((tag) => {
+        const fullTag = availableTags.find((t) => t.id === tag.id);
+        if (fullTag) cacheService.clearTagCache(fullTag.id, fullTag.slug);
+      });
 
       toast.success("Tags saved successfully!");
     } catch (error) {

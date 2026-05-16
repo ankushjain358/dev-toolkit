@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/form";
 import { getUserInfo } from "@/lib/utils";
 import outputs from "@/../amplify_outputs.json";
+import { cacheService } from "@/services/cache.service";
 
 const client = generateClient<Schema>();
 
@@ -193,7 +194,8 @@ export default function ProfilePage() {
         });
       }
 
-      form.reset(data); // Reset dirty state
+      form.reset(data);
+      cacheService.clearAllCache();
       toast.success("Profile updated successfully!");
     } catch (error) {
       console.error("Failed to save profile:", error);
