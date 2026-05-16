@@ -29,6 +29,11 @@ aws iam attach-role-policy \
   --role-name $ROLE_NAME \
   --policy-arn arn:aws:iam::aws:policy/AdministratorAccess-Amplify
 
+# Attach AmazonDynamoDBFullAccess managed policy
+aws iam attach-role-policy \
+  --role-name $ROLE_NAME \
+  --policy-arn arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+
 # Get role ARN
 ROLE_ARN=$(aws iam get-role --role-name $ROLE_NAME --query 'Role.Arn' --output text)
 
