@@ -2,12 +2,14 @@ import Link from "next/link";
 import { Search, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getSiteSettings } from "@/services/common.service";
 import outputs from "@/../amplify_outputs.json";
+import { getSiteSettings, SiteSettingsData } from "@/services/db.service";
+
+export const revalidate = 86400;
 
 export async function Header() {
-  const settings = await getSiteSettings();
-  const siteName = settings.siteName;
+  const settings: SiteSettingsData = await getSiteSettings();
+  const siteName = settings.siteName || "Default Blog";
   const logoUrl = settings.logoLightUrl
     ? `https://${outputs.custom.distributionDomainName}/${settings.logoLightUrl}`
     : "";

@@ -1,6 +1,6 @@
 import { ExternalLayout } from "@/components/layout/external-layout";
-import { getSiteSettings } from "@/services/common.service";
 import { Card, CardContent } from "@/components/ui/card";
+import { getSiteSettings } from "@/services/db.service";
 import {
   Mail,
   Globe,

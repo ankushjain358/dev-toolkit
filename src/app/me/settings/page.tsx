@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/collapsible";
 import { getUserInfo } from "@/lib/utils";
 import outputs from "@/../amplify_outputs.json";
+import { cacheService } from "@/services/cache.service";
 
 const client = generateClient<Schema>();
 
@@ -254,6 +255,7 @@ export default function SiteSettingsPage() {
       }
 
       form.reset(data);
+      cacheService.clearAllCache();
       toast.success("Site settings updated successfully!");
     } catch (error) {
       console.error("Failed to save site settings:", error);

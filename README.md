@@ -106,8 +106,8 @@ The project uses **Amplify CI/CD** for automated deployment.
          - .npm/**/*
    ```
 
-3. (Optional) Amplify requires a service IAM role. It is recommended to create one and reuse it across apps.
-   Refer to the [`create-amplify-role.sh`](docs/create-amplify-role.sh) script to create a new role.
+3. Amplify requires a service IAM role with both `AdministratorAccess-Amplify` and `AmazonDynamoDBFullAccess`.
+   Create the role named `AmplifyServiceRole` using the [`scripts/create-amplify-role.sh`](scripts/create-amplify-role.sh) script, and reuse it across other Amplify apps.
 
 4. Go to the AWS Amplify Console and create a new Amplify app:
    - **Step 1**: Select **GitHub** as the Git provider.
@@ -118,13 +118,17 @@ The project uses **Amplify CI/CD** for automated deployment.
 
      ![Step 2](design-docs/deployment-guide/step-2.png)
 
-   - **Step 3**: Provide an app name and select either the existing role (`AmplifyServiceRole`) or choose **Create and use a new service role**.
+   - **Step 3**: Provide an app name and select the existing role (`AmplifyServiceRole`).
+     Do not choose **Create and use a new service role**, because the deployment depends on the preconfigured role with DynamoDB access.
 
      ![Step 3](design-docs/deployment-guide/step-3.png)
 
    - **Step 4**: Review the settings and click **Save and deploy**.
 
      ![Step 4](design-docs/deployment-guide/step-4.png)
+
+   - **Step 5**: After deployment, attach the IAM role to Amplify Compute for ISR support:
+     **Select Amplify App → App Settings → IAM Roles → Compute role**, then choose the same `AmplifyServiceRole`.
 
 5. Next, refer to the **Adding Custom Domain and SSL Certificate** section below.
 
@@ -169,7 +173,8 @@ The project uses **GitHub Actions** for automated deployment across multiple env
    - Each branch represents an environment.
    - Multiple environments can exist within the same AWS account.
 
-4. (Optional) Create a reusable Amplify service IAM role using [`create-amplify-role.sh`](scripts/create-amplify-role.sh).
+4. Create a reusable Amplify service IAM role using [`scripts/create-amplify-role.sh`](scripts/create-amplify-role.sh).
+   The role must include both `AdministratorAccess-Amplify` and `AmazonDynamoDBFullAccess`.
 
 5. In the AWS Amplify Console, create an Amplify app and connect the **develop** branch (dev environment):
    - **Step 1**: Select "Deploy an App" if there is no app.
@@ -181,27 +186,31 @@ The project uses **GitHub Actions** for automated deployment across multiple env
 
      ![Step 3](design-docs/deployment-guide/custom-domain-with-ssl-2.png)
 
-   - **Step 4**: Provide an app name and select an existing or new service role.
+   - **Step 4**: Provide an app name and select the existing role (`AmplifyServiceRole`).
+     Do not create a new service role in the console.
 
    - **Step 5**: Review and click **Save and deploy**.
 
-   - **Step 6**: Disable auto-build for the branch:
+   - **Step 6**: After deployment, attach the IAM role to Amplify Compute for ISR support:
+     **Select Amplify App → App Settings → IAM Roles → Compute role**, then choose the same `AmplifyServiceRole`.
+
+   - **Step 7**: Disable auto-build for the branch:
      **App settings → Branch settings → Select branch → Actions → Disable auto build**
 
-   - **Step 7 (Optional)**: Cancel the initial pipeline from **Overview → Branch deployment page**.
+   - **Step 8 (Optional)**: Cancel the initial pipeline from **Overview → Branch deployment page**.
 
      > Cancelling the initial pipeline because it only deploys the frontend and requires `amplify_outputs.json` file. Deploy the backend first so the `amplify_outputs.json` file is created and the frontend build can access backend outputs.
 
-   - **Step 8**: Add `main` branch:
+   - **Step 9**: Add `main` branch:
      **App settings → Branch settings → Add branch → Select main branch**
 
-   - **Step 9**: Disable auto-build for the branch (main):
+   - **Step 10**: Disable auto-build for the branch (main):
      **App settings → Branch settings → Select branch (main) → Actions → Disable auto build**
 
-   - **Step 10**: Set `main` as production branch:
+   - **Step 11**: Set `main` as production branch:
      **App settings → Branch settings → Select branch (main) → Actions → Set as production branch**
 
-   - **Step 11**: Create webhooks: **Hosting → Build settings → Incoming webhooks → Create webhook**
+   - **Step 12**: Create webhooks: **Hosting → Build settings → Incoming webhooks → Create webhook**
      - For `develop` branch
        - **Webhook name**: `deploy-develop-branch`
        - **Branch to build**: `develop`

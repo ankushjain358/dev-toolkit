@@ -70,5 +70,11 @@ const distribution = new cloudfront.Distribution(
 backend.addOutput({
   custom: {
     distributionDomainName: distribution.distributionDomainName,
+    blogTableName: backend.data.resources.tables["Blog"].tableName,
+    tagTableName: backend.data.resources.tables["Tag"].tableName,
+    blogTagTableName: backend.data.resources.tables["BlogTag"].tableName,
+    siteSettingsTableName:
+      backend.data.resources.tables["SiteSettings"].tableName,
+    profileTableName: backend.data.resources.tables["Profile"].tableName,
   },
 });

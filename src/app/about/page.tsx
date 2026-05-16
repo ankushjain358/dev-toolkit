@@ -1,7 +1,7 @@
 import { ExternalLayout } from "@/components/layout/external-layout";
-import { getSiteSettings } from "@/services/common.service";
 import outputs from "@/../amplify_outputs.json";
 import { marked } from "marked";
+import { getSiteSettings } from "@/services/db.service";
 
 export default async function AboutPage() {
   const settings = await getSiteSettings();
