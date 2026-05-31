@@ -212,7 +212,7 @@
 .tiptap pre code {
   background: transparent;
   border: 0;
-  display: inline;
+  display: block;
   line-height: inherit;
   margin: 0;
   overflow: visible;
@@ -220,6 +220,9 @@
   word-wrap: normal;
   color: inherit;
   font-size: inherit;
+  /* Preserve original newlines and allow long lines to wrap */
+  white-space: pre-wrap;
+  hyphens: none;
 }
 
 /* Syntax highlighting for lowlight/highlight.js output */

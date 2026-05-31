@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useEffect } from "react";
 import {
   useEditor,
   EditorContent,
@@ -40,15 +41,17 @@ import CodeBlockComponent from "./CodeBlockComponent";
 const _lowlight = createLowlight(all);
 
 interface TiptapEditorProps {
-  content: string;
-  onChange: (content: string) => void;
+  markdownContent: string;
+  onChange: (payload: { markdown: string; html?: string }) => void;
   onImageUpload?: (file: File) => Promise<string>;
+  editorRef?: React.MutableRefObject<any | null>;
 }
 
 export default function TiptapEditor({
-  content,
+  markdownContent,
   onChange,
   onImageUpload,
+  editorRef,
 }: TiptapEditorProps) {
   const handleImageUpload = async (file: File) => {
     if (!onImageUpload) return;
@@ -118,7 +121,7 @@ export default function TiptapEditor({
       // Support hard line breaks (Shift+Enter) so they become hardBreak nodes
       TableKit,
       Markdown.configure({
-        html: true, // Allow HTML input/output
+        html: false, // Disable Markdown's HTML parsing; use Tiptap's native HTML parser instead to avoid nesting <pre><code>
         tightLists: true, // No <p> inside <li> in markdown output
         tightListClass: "tight", // Add class to <ul> allowing you to remove <p> margins when tight
         bulletListMarker: "-", // <li> prefix in markdown output
@@ -128,10 +131,11 @@ export default function TiptapEditor({
         transformCopiedText: true, // Copied text is transformed to markdown
       }),
     ],
-    content,
+    content: "",
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      const markdown = (editor.storage as any).markdown?.getMarkdown() ?? "";
+      onChange({ markdown });
     },
     editorProps: {
       handlePaste,
@@ -165,6 +169,32 @@ export default function TiptapEditor({
       },
     },
   });
+
+  // Keep the editor content in sync with the parent-provided markdown source.
+  // This avoids overwriting the editor unless the incoming markdown actually differs
+  // from the editor's current markdown state.
+  useEffect(() => {
+    if (!editor) return;
+
+    const currentMarkdown =
+      (editor.storage as any).markdown?.getMarkdown() ?? "";
+    if (currentMarkdown === markdownContent) return;
+
+    editor.commands.setContent(markdownContent, {
+      contentType: "markdown",
+    } as any);
+  }, [editor, markdownContent]);
+
+  // Expose the editor instance to the parent via ref so the parent can read HTML
+  // on save without triggering editor state updates from every change.
+  useEffect(() => {
+    if (!editorRef || !editor) return;
+
+    editorRef.current = editor;
+    return () => {
+      editorRef.current = null;
+    };
+  }, [editor, editorRef]);
 
   const editorState = useEditorState({
     editor,

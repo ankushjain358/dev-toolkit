@@ -10,7 +10,7 @@ const schema = a
         title: a.string().required(),
         slug: a.string().required(),
         state: a.enum(["UNPUBLISHED", "PUBLISHED"]),
-        contentJson: a.string(), // JSON content from Tiptap
+        contentMarkdown: a.string(), // JSON content from Tiptap
         contentHtml: a.string(), // HTML content from Tiptap
         excerpt: a.string(), // First 50 chars of content + "..."
         coverImage: a.string(), // S3 key for cover image

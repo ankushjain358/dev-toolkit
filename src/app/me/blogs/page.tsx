@@ -189,7 +189,7 @@ export default function BlogsPage() {
         title: data.title.trim(),
         slug,
         state: "UNPUBLISHED",
-        contentJson: null,
+        contentMarkdown: null,
         contentHtml: null,
       });
 
