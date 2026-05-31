@@ -62,7 +62,7 @@ const blogSchema = z.object({
     .string()
     .min(1, "Title is required")
     .max(200, "Title must be less than 200 characters"),
-  content: z.string().min(1, "Content is required"),
+  markdown_content: z.string().min(1, "Content is required"),
   coverImage: z.string().optional(),
   excerpt: z.string().optional(),
 });
@@ -88,6 +88,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const blogRef = useRef<any>(null);
+  const editorRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -100,7 +101,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     resolver: zodResolver(blogSchema),
     defaultValues: {
       title: "",
-      content: "",
+      markdown_content: "",
       coverImage: "",
     },
   });
@@ -125,13 +126,11 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
     }
   };
 
-  const [editorContent, setEditorContent] = useState(
-    "<p>Start typing here...</p>",
-  );
+  const [editorMarkdownContent, setEditorMarkdownContent] = useState("");
 
-  const handleEditorChange = (content: string) => {
-    setEditorContent(content);
-    form.setValue("content", content, { shouldDirty: true });
+  const handleEditorChange = ({ markdown }: { markdown: string }) => {
+    setEditorMarkdownContent(markdown);
+    form.setValue("markdown_content", markdown, { shouldDirty: true });
   };
 
   const debouncedSave = useMemo(
@@ -175,10 +174,10 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
 
       blogRef.current = data;
       form.setValue("title", data.title || "");
-      const content = data.contentHtml || "<p></p>";
-      form.setValue("content", content);
+      const markdown = data.contentMarkdown ?? "";
+      form.setValue("markdown_content", markdown);
       form.setValue("coverImage", data.coverImage || "");
-      setEditorContent(content);
+      setEditorMarkdownContent(markdown);
 
       // Load tags using lazy loading from blog's hasMany relationship
       try {
@@ -230,8 +229,11 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         blogRef.current.id,
       );
 
-      // Generate excerpt from content (first 50 chars + "...")
-      const plainText = formData.content
+      const markdown = formData.markdown_content;
+      const html = editorRef.current?.getHTML() ?? "";
+
+      // Generate excerpt from rendered HTML content (first 50 chars + "...")
+      const plainText = html
         .replace(/<[^>]*>/g, "") // Remove HTML tags
         .replace(/&nbsp;/g, " ")
         .trim();
@@ -242,8 +244,8 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
         id: blogRef.current.id,
         title: formData.title,
         slug: slug,
-        contentHtml: formData.content,
-        contentJson: formData.content,
+        contentHtml: html,
+        contentMarkdown: markdown,
         excerpt: excerpt,
         coverImage: formData.coverImage || null,
       });
@@ -663,9 +665,10 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
           </Card>
 
           <TiptapEditor
-            content={editorContent}
+            markdownContent={editorMarkdownContent}
             onChange={handleEditorChange}
             onImageUpload={handleImageUpload}
+            editorRef={editorRef}
           />
         </div>
       </Form>

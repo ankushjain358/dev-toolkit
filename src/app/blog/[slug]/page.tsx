@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ExternalLayout } from "@/components/layout/external-layout";
 import { formatDate } from "@/lib/utils";
 import { highlightHtmlCodeBlocks } from "@/lib/highlight-html";
+import { marked } from "marked";
 import { getBlogDetail, getPublishedBlogSlugs } from "@/services/db.service";
 import TableOfContents from "@/components/TableOfContents";
 
@@ -54,9 +55,14 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
 
   const { blog, author, tags, avatarUrl, coverImageUrl } = data;
 
-  // Apply syntax highlighting to code blocks server-side
-  const highlightedContent = blog.contentHtml
-    ? await highlightHtmlCodeBlocks(blog.contentHtml)
+  // Convert markdown to HTML on the server so the blog is markdown-first.
+  // If markdown is missing, render an empty content state instead of using legacy HTML.
+  const rawContent = blog.contentMarkdown
+    ? await marked.parse(blog.contentMarkdown)
+    : "";
+
+  const highlightedContent = rawContent
+    ? await highlightHtmlCodeBlocks(rawContent)
     : null;
 
   return (
