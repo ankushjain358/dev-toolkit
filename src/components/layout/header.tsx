@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Search, Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import outputs from "@/../amplify_outputs.json";
 import { getSiteSettings, SiteSettingsData } from "@/services/db.service";
 
@@ -63,11 +63,7 @@ export async function Header() {
               disabled
             />
           </div>
-          <Button variant="ghost" size="icon">
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
+          <ThemeToggle />
         </div>
       </div>
     </header>

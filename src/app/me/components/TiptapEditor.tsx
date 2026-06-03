@@ -116,12 +116,14 @@ export default function TiptapEditor({
           return ReactNodeViewRenderer(CodeBlockComponent);
         },
       }).configure({
+        defaultLanguage: "plaintext",
+        enableTabIndentation: true,
         lowlight: _lowlight,
       }),
       // Support hard line breaks (Shift+Enter) so they become hardBreak nodes
       TableKit,
       Markdown.configure({
-        html: false, // Disable Markdown's HTML parsing; use Tiptap's native HTML parser instead to avoid nesting <pre><code>
+        html: false, // Disable Markdown's HTML parsing; it was creating issue while initializing the editor with html due to markdown plugin
         tightLists: true, // No <p> inside <li> in markdown output
         tightListClass: "tight", // Add class to <ul> allowing you to remove <p> margins when tight
         bulletListMarker: "-", // <li> prefix in markdown output
