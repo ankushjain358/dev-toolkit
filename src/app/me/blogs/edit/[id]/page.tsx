@@ -92,6 +92,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [blogState, setBlogState] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<SelectedTag[]>([]);
   const [originalTags, setOriginalTags] = useState<SelectedTag[]>([]);
   const [tagComboOpen, setTagComboOpen] = useState(false);
@@ -173,6 +174,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       }
 
       blogRef.current = data;
+      setBlogState(data.state || null);
       form.setValue("title", data.title || "");
       const markdown = data.contentMarkdown ?? "";
       form.setValue("markdown_content", markdown);
@@ -313,6 +315,7 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
       });
 
       blogRef.current = { ...blogRef.current, state: newState };
+      setBlogState(newState);
 
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.BLOGS(blogRef.current.userId),
@@ -484,19 +487,15 @@ export default function BlogEditorPage({ params }: BlogEditorProps) {
             </Button>
             <Button
               onClick={togglePublishState}
-              variant={
-                blogRef.current?.state === "PUBLISHED"
-                  ? "destructive"
-                  : "default"
-              }
+              variant={blogState === "PUBLISHED" ? "destructive" : "default"}
               className="gap-2 cursor-pointer"
             >
-              {blogRef.current?.state === "PUBLISHED" ? (
+              {blogState === "PUBLISHED" ? (
                 <EyeOff className="h-4 w-4" />
               ) : (
                 <Eye className="h-4 w-4" />
               )}
-              {blogRef.current?.state === "PUBLISHED" ? "Unpublish" : "Publish"}
+              {blogState === "PUBLISHED" ? "Unpublish" : "Publish"}
             </Button>
           </div>
         </div>

@@ -106,6 +106,10 @@
   list-style-type: disc;
 }
 
+.tiptap ul ul {
+  list-style-type: circle;
+}
+
 .tiptap ol {
   list-style-type: decimal;
 }
@@ -120,6 +124,10 @@
    spacing so list items appear compact and inline with typical 'tight' markdown rendering. */
 .tiptap li > p {
   margin-top: 1rem;
+}
+
+.tiptap li > p:first-child {
+  display: inline;
 }
 
 /* Tight lists: remove paragraph margins inside list items */

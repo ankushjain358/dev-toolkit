@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ExternalLayout } from "@/components/layout/external-layout";
 import { formatDate } from "@/lib/utils";
-import { highlightHtmlCodeBlocks } from "@/lib/highlight-html";
 import { marked } from "marked";
+import ClientCodeHighlighter from "@/components/ClientCodeHighlighter";
 import { getBlogDetail, getPublishedBlogSlugs } from "@/services/db.service";
 import TableOfContents from "@/components/TableOfContents";
 
@@ -56,14 +56,10 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
   const { blog, author, tags, avatarUrl, coverImageUrl } = data;
 
   // Convert markdown to HTML on the server so the blog is markdown-first.
-  // If markdown is missing, render an empty content state instead of using legacy HTML.
+  // If markdown is missing, fall back to legacy html content.
   const rawContent = blog.contentMarkdown
     ? await marked.parse(blog.contentMarkdown)
-    : "";
-
-  const highlightedContent = rawContent
-    ? await highlightHtmlCodeBlocks(rawContent)
-    : null;
+    : (blog.contentHtml ?? "");
 
   return (
     <ExternalLayout>
@@ -138,8 +134,8 @@ export default async function BlogDetailPage({ params }: BlogDetailProps) {
 
             {/* Article Content */}
             <div className="blog-content tiptap prose prose-lg dark:prose-invert max-w-none">
-              {highlightedContent ? (
-                <div dangerouslySetInnerHTML={{ __html: highlightedContent }} />
+              {rawContent ? (
+                <ClientCodeHighlighter html={rawContent} />
               ) : (
                 <p className="text-muted-foreground">No content available.</p>
               )}
